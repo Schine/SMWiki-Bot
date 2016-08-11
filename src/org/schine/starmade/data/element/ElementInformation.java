@@ -370,6 +370,18 @@ public class ElementInformation implements Comparable<ElementInformation> {
 						(factoryId == ElementKeyMap.FACTORY_STANDARD_ID && producedInFactory == FAC_STANDARD) ||
 						(factoryId == ElementKeyMap.FACTORY_ADVANCED_ID && producedInFactory == FAC_ADVANCED);
 	}
+	public short getProducedIn() {
+		
+		switch(producedInFactory){
+		case FAC_CAPSULE: return ElementKeyMap.FACTORY_CAPSULE_ASSEMBLER_ID;
+		case FAC_MICRO: return ElementKeyMap.FACTORY_MICRO_ASSEMBLER_ID;
+		case FAC_BASIC: return ElementKeyMap.FACTORY_BASIC_ID;
+		case FAC_STANDARD: return ElementKeyMap.FACTORY_STANDARD_ID;
+		case FAC_ADVANCED: return ElementKeyMap.FACTORY_ADVANCED_ID;
+		default: return 0;
+		}
+		
+	}
 
 	private String getDivString(float c) {
 
@@ -1172,16 +1184,22 @@ public class ElementInformation implements Comparable<ElementInformation> {
 	public String[] parseDescription() {
 		String d = getDescription();
 
-		d = "Block-Armor: " + StringTools.formatPointZero(getArmourPercent()) + " \n\n" + d;
-		d = "Block-HP: " + getMaxHitPoints() + " \n" + d;
-		d = "Armor-HP  for Structure: " + armourHP + " \n" + d;
-		d = "System-HP for Structure: " + structureHP + " \n" + d;
-		d = "Mass: " + StringTools.formatPointZeroZero(getMass()) + " \n" + d;
-
 		String[] split = d.split("\\n");
+		boolean del = false;
 		for (int i = 0; i < split.length; i++) {
+			
 			split[i] = split[i].replace("$ACTIVATE", /*KeyboardMappings.ACTIVATE.getKeyChar()*/ "R");
 
+			
+			if (del || split[i].contains("Structural Stats") || split[i].contains("StructuralStats")) {
+				if(!del){
+					split[i] = split[i].substring(0, split[i].indexOf("Structural")-1);
+				}else{
+					split[i] = "";
+				}
+				del = true;
+			}
+			
 			if (split[i].contains("$RESOURCES")) {
 				split[i] = split[i].replace("$RESOURCES", getFactoryResourceString(this));
 			}
@@ -1193,6 +1211,7 @@ public class ElementInformation implements Comparable<ElementInformation> {
 			}
 
 			if (split[i].contains("$EFFECT")) {
+				split[i] = split[i].replace("$EFFECT", "");
 //				ShipManagerContainer c = new ShipManagerContainer(new Ship(state));
 //				EffectElementManager<?, ?, ?> effect = c.getEffect(getId());
 //				if (effect != null) {

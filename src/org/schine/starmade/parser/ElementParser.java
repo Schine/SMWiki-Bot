@@ -556,7 +556,7 @@ public class ElementParser {
 		desc = desc.replaceAll("\\\\n", "\n");
 		desc = desc.replaceAll("\\\\r", "\r");
 		desc = desc.replaceAll("\\\\t", "\t");
-
+		
 		//		desc = desc.replace(System.getProperty("line.separator"), "");
 		info.setDescription(desc);
 	}

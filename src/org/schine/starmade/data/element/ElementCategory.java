@@ -24,7 +24,7 @@ public class ElementCategory {
 	private final String category;
 	private final List<ElementCategory> children = new ObjectArrayList<ElementCategory>();
 	private final List<ElementInformation> infoElements = new ObjectArrayList<ElementInformation>();
-	private ElementCategory parent;
+	private final ElementCategory parent;
 
 	public ElementCategory(String category, ElementCategory parent) {
 		this.category = category;
@@ -119,8 +119,8 @@ public class ElementCategory {
 
 	@Override
 	public boolean equals(Object obj) {
-		return category.equals(((ElementCategory) obj).category) && ((parent == null && ((ElementCategory) obj).parent == null) ||
-				parent.equals(((ElementCategory) obj).parent));
+		return category.equals(((ElementCategory) obj).category) && ((getParent() == null && ((ElementCategory) obj).getParent() == null) ||
+				getParent().equals(((ElementCategory) obj).getParent()));
 	}
 
 	
@@ -131,7 +131,7 @@ public class ElementCategory {
 	}
 
 	public boolean isRoot() {
-		return parent == null;
+		return getParent() == null;
 	}
 
 	public void print() {
@@ -176,8 +176,8 @@ public class ElementCategory {
 		if (category.toLowerCase(Locale.ENGLISH).equals(string.toLowerCase(Locale.ENGLISH))) {
 			return true;
 		}
-		if (parent != null) {
-			return parent.hasParent(string);
+		if (getParent() != null) {
+			return getParent().hasParent(string);
 		}
 		return false;
 	}
@@ -415,6 +415,10 @@ public class ElementCategory {
 		} catch (Exception e1) {
 			e1.printStackTrace();
 		}
+	}
+
+	public ElementCategory getParent() {
+		return parent;
 	}
 
 }
