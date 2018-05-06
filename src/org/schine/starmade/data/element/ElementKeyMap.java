@@ -1,14 +1,29 @@
 package org.schine.starmade.data.element;
 
 import it.unimi.dsi.fastutil.ints.IntOpenHashSet;
+import it.unimi.dsi.fastutil.objects.Object2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.shorts.Short2ObjectOpenHashMap;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
 import it.unimi.dsi.fastutil.shorts.ShortOpenHashSet;
 
+import org.schema.schine.resource.FileExt;
+import org.schine.starmade.data.element.ElementInformation.ResourceInjectionType;
+import org.schine.starmade.data.element.exception.CannotAppendXMLException;
+import org.schine.starmade.data.element.exception.ElementParserException;
+import org.schine.starmade.data.element.exception.ParseException;
+import org.schine.starmade.data.element.factory.FactoryResource;
+import org.schine.starmade.data.element.factory.FixedRecipe;
+import org.schine.starmade.data.element.factory.FixedRecipeProduct;
+import org.schine.starmade.data.element.factory.FixedRecipes;
+import org.schine.starmade.parser.ElementParser;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.StringWriter;
@@ -17,12 +32,13 @@ import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Enumeration;
-import java.util.HashMap;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Properties;
+import java.util.Set;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -33,13 +49,6 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
-import org.schine.starmade.data.element.exception.CannotAppendXMLException;
-import org.schine.starmade.data.element.exception.ElementParserException;
-import org.schine.starmade.data.element.exception.ParseException;
-import org.schine.starmade.data.element.factory.FixedRecipe;
-import org.schine.starmade.data.element.factory.FixedRecipes;
-import org.schine.starmade.mediawiki.MediawikiExport;
-import org.schine.starmade.parser.ElementParser;
 import org.w3c.dom.Comment;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
@@ -65,7 +74,7 @@ public class ElementKeyMap {
 	public static final short THRUSTER_ID = 8;
 	public static final short TURRET_DOCK_ID = 7;
 	public static final short TURRET_DOCK_ENHANCE_ID = 88;
-	public static final short POWER_ID = 2;
+	public static final short POWER_ID_OLD = 2;
 	public static final short POWER_CAP_ID = 331;
 	public static final short SHIELD_CAP_ID = 3;
 	public static final short SHIELD_REGEN_ID = 478;
@@ -137,6 +146,7 @@ public class ElementKeyMap {
 	public static final short TERRAIN_TREE_TRUNK_ID = 84;
 	public static final short TERRAIN_TREE_LEAF_ID = 85;
 
+	//	143 - 151 - 155 - 159 - 163 - 171 - 179 - 203
 	public static final short TERRAIN_WATER = 86;
 	public static final short TERRAIN_DIRT_ID = 87;
 	public static final short TERRAIN_VINES_ID = TERRAIN_TREE_LEAF_ID;
@@ -148,25 +158,30 @@ public class ElementKeyMap {
 	public static final short PLAYER_SPAWN_MODULE = 94;
 	public static final short LIGHT_BULB_YELLOW = 340;
 	//earth like sprite stuff
-	public static final short TERRAIN_GRASS_SPRITE = 93;
-	public static final short TERRAIN_GRASSFLOWERS_SPRITE = 98;
-	public static final short TERRAIN_TALLGRASSFLOWERS_SPRITE = 102;
-	public static final short TERRAIN_TALLFLOWERS_SPRITE = 106;
+	public static final short TERRAIN_FLOWERS_BLUE_SPRITE = 93;
+	public static final short TERRAIN_GRASS_LONG_SPRITE = 98;
+	public static final short TERRAIN_BERRY_BUSH_SPRITE = 102;
+	public static final short TERRAIN_FLOWERS_YELLOW_SPRITE = 106;
 	//desert sprite stuff
-	public static final short TERRAIN_BROWNWEED_SPRITE = 95;
-	public static final short TERRAIN_MINICACTUS_SPRITE = 103;
-	public static final short TERRAIN_LONGWEED_SPRITE = 99;
+	public static final short TERRAIN_CACTUS_SMALL_SPRITE = 95;
+	public static final short TERRAIN_CACTUS_ARCHED_SPRITE = 103;
+	public static final short TERRAIN_FLOWERS_DESERT_SPRITE = 99;
 	public static final short TERRAIN_ROCK_SPRITE = 107;
 	//mars sprite stuff
-	public static final short TERRAIN_MARSTENTACLES_SPRITE = 96;
-	public static final short TERRAIN_REDSHROOM_SPRITE = 104;
-	public static final short TERRAIN_TALLSHROOM_SPRITE = 100;
-	public static final short TERRAIN_ALIENFLOWERS_SPRITE = 108;
+	public static final short TERRAIN_CORAL_RED_SPRITE = 96;
+	public static final short TERRAIN_SHROOM_RED_SPRITE = 104;
+	public static final short TERRAIN_FUNGAL_GROWTH_SPRITE = 100;
+	public static final short TERRAIN_FUNGAL_TRAP_SPRITE = 108;
 	//columny sprite stuff
-	public static final short TERRAIN_ALIENVINE_SPRITE = 97;
-	public static final short TERRAIN_PURSPIRE_SPRITE = 101;
-	public static final short TERRAIN_PURPTACLES_SPRITE = 105;
-	public static final short TERRAIN_YHOLE_SPRITE = 109;
+	public static final short TERRAIN_FLOWER_FAN_PURPLE_SPRITE = 97;
+	public static final short TERRAIN_GLOW_TRAP_SPRITE = 101;
+	public static final short TERRAIN_WEEDS_PURPLE_SPRITE = 105;
+	public static final short TERRAIN_YHOLE_PURPLE_SPRITE = 109;
+	//ice sprite stuff
+	public static final short TERRAIN_FAN_FLOWER_ICE_SPRITE = 278;
+	public static final short TERRAIN_ICE_CRAG_SPRITE = 279;
+	public static final short TERRAIN_CORAL_ICE_SPRITE = 280;
+	public static final short TERRAIN_SNOW_BUD_SPRITE = 281;
 	//FACTORY
 	public static final short FACTORY_BASIC_ID = 211;
 	public static final short FACTORY_STANDARD_ID = 217;
@@ -181,11 +196,6 @@ public class ElementKeyMap {
 	public static final short TERRAIN_ICEPLANET_ROCK = 275;
 	public static final short TERRAIN_ICEPLANET_WOOD = 276;
 	public static final short TERRAIN_ICEPLANET_LEAVES = 277;
-	public static final short TERRAIN_ICEPLANET_SPIKE_SPRITE = 278;
-	public static final short TERRAIN_ICEPLANET_ICECRAG_SPRITE = 279;
-	public static final short TERRAIN_ICEPLANET_ICECORAL_SPRITE = 280;
-	
-	public static final short TERRAIN_ICEPLANET_ICEGRASS_SPRITE = 281;
 	
 	public static final short LIGHT_RED = 282;
 	public static final short LIGHT_BLUE = 283;
@@ -264,6 +274,7 @@ public class ElementKeyMap {
 	public static final short SHIPYARD_COMPUTER = 677;
 	public static final short SHIPYARD_MODULE = 678;
 	public static final short SHIPYARD_CORE_POSITION = 679;
+	public static final short REPULSE_MODULE = 1126;
 
 	
 	
@@ -286,8 +297,17 @@ public class ElementKeyMap {
 	public static final int Hital = 13;
 	public static final int Fertikeen = 14;
 	public static final int Parstun = 15;
-	//16 doesnt have one, as it has orientation 0
-	public static final int Nacht = 17;
+	public static final int Nacht = 16;
+
+	public static final short CRYS_RAMMET = 452;
+	public static final short CRYS_NOCX = 453;
+	public static final short CRYS_PARSEEN = 454;
+	public static final short CRYS_HATTEL = 455;
+	public static final short CRYS_MATTISE = 456;
+	public static final short CRYS_SINTYR = 457;
+	public static final short CRYS_BASTYN = 458;
+	public static final short CRYS_VARAT = 459;
+
 	public static final short RESS_CRYS_HATTEL = 480;
 	public static final short RESS_CRYS_SINTYR = 481;
 	public static final short RESS_CRYS_MATTISE = 482;
@@ -311,6 +331,8 @@ public class ElementKeyMap {
 	public static final short RAIL_BLOCK_TURRET_Y_AXIS = 665;
 	public static final short RAIL_RAIL_SPEED_CONTROLLER = 672;
 	public static final short RAIL_MASS_ENHANCER = 671;
+	public static final short RAIL_LOAD = 1104;
+	public static final short RAIL_UNLOAD = 1105;
 	public static final short LOGIC_REMOTE_INNER = 670;
 	
 	public static final short RACE_GATE_CONTROLLER = 683;
@@ -321,14 +343,62 @@ public class ElementKeyMap {
 	public static final short TRANSPORTER_MODULE = 688;
 
 	public static final short CARGO_SPACE = 689;
+
+	public static final short POWER_BATTERY = 978;
 	
 	
 	public static final short PICKUP_AREA=937;
 	public static final short PICKUP_RAIL=938;
 	public static final short EXIT_SHOOT_RAIL=939;
 	
+	public static final short SIGNAL_RANDOM=979;
+	public static final short SIGNAL_SENSOR=980;
+	
+	public static final short BLUEPRINT_EMPTY=999;
+
+	public static final short REACTOR_STABILIZER_STREAM_NODE = 66;
+	
+	public static final short REACTOR_MAIN=1008;
+	public static final short REACTOR_STABILIZER = 1009;
+	public static final short REACTOR_CONDUIT = 1010;
+	public static final short REACTOR_CHAMBER_MOBILITY = 1011;
+	public static final short REACTOR_CHAMBER_SCANNER = 1012;
+	public static final short REACTOR_CHAMBER_JUMP = 1013;
+	public static final short REACTOR_CHAMBER_STEALTH = 1014;
+	public static final short REACTOR_CHAMBER_LOGISTICS = 1015;
+	public static final short REACTOR_CHAMBER_JUMP_DISTANCE_0 = 1100;
+	public static final short REACTOR_CHAMBER_JUMP_DISTANCE_1 = 1101;
+	public static final short REACTOR_CHAMBER_JUMP_DISTANCE_2 = 1102;
+	public static final short REACTOR_CHAMBER_JUMP_DISTANCE_3 = 1103;
+	
+	public static final short[] resources = new short[16];
 	public static final short[] orientationToResIDMapping = new short[32];
 	public static final byte[] resIDToOrientationMapping = new byte[2048];
+	
+	public static final short MINE_CORE=37;
+	public static final short MINE_LAYER=41;
+	
+	public static final short EFFECT_EM_COMPUTER=349;
+	public static final short EFFECT_EM=350;
+	public static final short EFFECT_HEAT_COMPUTER=351;
+	public static final short EFFECT_HEAT=352;
+	public static final short EFFECT_KINETIC_COMPUTER=353;
+	public static final short EFFECT_KINETIC=354;
+	
+	public static final short MINE_TYPE_CANNON=355;
+	public static final short MINE_TYPE_MISSILE=356;
+	public static final short MINE_TYPE_PROXIMITY=358;
+	public static final short MINE_TYPE_D=359;
+	public static final short TRACTOR_BEAM_COMPUTER=360;
+	public static final short TRACTOR_BEAM=361;
+	
+	public static final short MINE_MOD_STRENGTH=363;
+	public static final short MINE_MOD_PERSONAL=364;
+	public static final short MINE_MOD_FRIENDS=365;
+	public static final short MINE_MOD_STEALTH=366;
+	
+	public static final short MISSILE_CAPACITY_MODULE=362;
+	
 	/**
 	 * corresponding texture position (starting with 1) from block orientation
 	 */
@@ -336,7 +406,11 @@ public class ElementKeyMap {
 	public static final ShortOpenHashSet keySet = new ShortOpenHashSet(256);
 	public static final ShortArrayList doorTypes = new ShortArrayList();
 	public static final ShortArrayList inventoryTypes = new ShortArrayList();
-	private static final Map<Short, ElementInformation> informationKeyMap = new HashMap<Short, ElementInformation>();
+	public static final ShortArrayList chamberAnyTypes = new ShortArrayList();
+	public static final ShortArrayList chamberGeneralTypes = new ShortArrayList();
+	public static final ShortArrayList lightTypes = new ShortArrayList();
+	public static final ShortArrayList sourcedTypes = new ShortArrayList();
+	private static final Short2ObjectOpenHashMap<ElementInformation> informationKeyMap = new Short2ObjectOpenHashMap<ElementInformation>();
 	private static final ShortOpenHashSet factoryKeySet = new ShortOpenHashSet(256);
 	private static final ShortOpenHashSet leveldKeySet = new ShortOpenHashSet(256);
 	private static final Short2ObjectOpenHashMap<ElementInformation> projected = new Short2ObjectOpenHashMap<ElementInformation>();
@@ -356,7 +430,9 @@ public class ElementKeyMap {
 	public static FixedRecipe personalCapsuleRecipe;
 	private static short[] keyArray;
 	private static ElementCategory categoryHirarchy;
+	private static List<String> categoryNames;
 	public static String propertiesPath;
+	public static File configFile;
 	
 	
 	public static final short[] HULL_HELPER = new short[]{
@@ -369,8 +445,29 @@ public class ElementKeyMap {
 		 HULL_COLOR_YELLOW_ID,
 		 HULL_COLOR_WHITE_ID
 	};
+	public static final byte MAX_HITPOINTS = 127;
+	public static final float MAX_HITPOINTS_INV = 1f/127f;
 	
+	
+	static{
+		resources[0] = RESS_CRYS_HATTEL;
+		resources[1] = RESS_CRYS_SINTYR;
+		resources[2] = RESS_CRYS_MATTISE;
+		resources[3] = RESS_CRYS_RAMMET;
+		resources[4] = RESS_CRYS_VARAT;
+		resources[5] = RESS_CRYS_BASTYN;
+		resources[6] = RESS_CRYS_PARSEN;
+		resources[7] = RESS_CRYS_NOCX;
 
+		resources[8] = RESS_ORE_THRENS;
+		resources[9] = RESS_ORE_JISPER;
+		resources[10] = RESS_ORE_ZERCANER;
+		resources[11] = RESS_ORE_SERTISE;
+		resources[12] = RESS_ORE_HITAL;
+		resources[13] = RESS_ORE_FERTIKEEN;
+		resources[14] = RESS_ORE_PARSTUN;
+		resources[15] = RESS_ORE_NACHT;
+	}
 	static {
 		orientationToResIDMapping[Hattel] = RESS_CRYS_HATTEL;
 		orientationToResIDMapping[Sintyr] = RESS_CRYS_SINTYR;
@@ -458,7 +555,7 @@ public class ElementKeyMap {
 	}
 
 	public static boolean hasResourceInjected(short type, byte orientation) {
-		return isValidType(type) && getInfo(type).resourceInjection > 0 && orientation > 0 && orientation != 16 && orientation <= 17;
+		return isValidType(type) && getInfo(type).resourceInjection != ResourceInjectionType.OFF && orientation > 0 && orientation < 17;
 	}
 
 	private static void add(short key, ElementInformation information) throws ParserConfigurationException {
@@ -477,29 +574,30 @@ public class ElementKeyMap {
 
 	}
 
-	public static void addInformationToExisting(ElementInformation info) throws ParserConfigurationException {
 
-		categoryHirarchy.insertRecusrive(info);
-		add(info.getId(), info);
-		infoArray = new ElementInformation[highestType + 1];
-		factoryInfoArray = new boolean[highestType + 1];
-		validArray = new boolean[highestType + 1];
-		lodShapeArray = new boolean[highestType + 1];
-
-		for (Entry<Short, ElementInformation> e : informationKeyMap.entrySet()) {
-
-			infoArray[e.getKey()] = e.getValue();
-			validArray[e.getKey()] = true;
-			
-		}
-		if (factoryKeySet.contains(info.getId())) {
-			factoryInfoArray[info.getId()] = true;
-			info.getFactory().enhancer = FACTORY_INPUT_ENH_ID;
-		}
-		if(info.hasLod()){
-			lodShapeArray[info.getId()] = true;
-		}
-	}
+//	public static void addShipHull(short id, int shopId, String color, short textureId) throws ParserConfigurationException{
+//		ElementInformation infoHull = new ElementInformation(id, "Hull "+color, GeneralElement.class, textureId);
+//		infoHull.setPrice(500);
+//		infoHull.setAmour(50);
+//		infoHull.setBuildIconNum(shopId);
+//		infoHull.setShoppable(true);
+//		if(id == GLASS_ID){
+//			infoHull.setBlended(true);
+//		}
+//		infoHull.setDescription(formatDescString(
+//				"The Hull Element\n\n" +
+//						"A cheap amoured Element to give the ship structure.\n" +
+//						"It should be used to protect more important elements.\n\n\n" +
+//
+//				"COST:          500\n" +
+//				"RANGE:         -\n" +
+//				"HP:         	100\n" +
+//				"AMOUR:         50\n" +
+//				"NEEDS POWER:   NO\n" +
+//				"CONTROLS:      -\n" +
+//				"CONTROLLED BY: -"));
+//		add(id, infoHull);
+//	}
 
 	public static void clear() {
 		informationKeyMap.clear();
@@ -510,6 +608,7 @@ public class ElementKeyMap {
 		projected.clear();
 		leveldKeySet.clear();
 		categoryHirarchy.clear();
+		categoryNames = null;
 		factoryInfoArray = null;
 		validArray = null;
 		signalArray = null;
@@ -522,12 +621,14 @@ public class ElementKeyMap {
 
 	public static String formatDescString(String input) {
 		StringBuffer b = new StringBuffer(input);
+		//		System.err.println("converting "+input);
 		int c = 0;
 		int max = 50;
 		for (int i = 0; i < b.length() - 1; i++) {
 			if (b.charAt(i) == '\n') {
 				c = 0;
 				i++;
+				//				System.err.println("reset at: "+c);
 			}
 
 			if (c > max) {
@@ -537,6 +638,7 @@ public class ElementKeyMap {
 				b.deleteCharAt(i);
 				b.insert(i, "\n");
 				i++;
+				//				System.err.println("newline at: "+c);
 				c = 0;
 
 			}
@@ -544,7 +646,23 @@ public class ElementKeyMap {
 			c++;
 		}
 		String r = b.toString();
+		//		System.err.println("RESULT: "+r);
 		return r;
+	}
+	
+	public static String[] getCategoryNames(ElementCategory cat) {
+		if (categoryNames == null) {
+			categoryNames = new ArrayList<String>();
+		}
+		categoryNames.clear();
+		getCategoryNames(cat, categoryNames);
+		return categoryNames.toArray(new String[categoryNames.size()]);
+	}
+	public static void getCategoryNames(ElementCategory cat, List<String> out) {
+		for (ElementCategory child : cat.getChildren()) {
+			out.add(child.getCategory());
+			getCategoryNames(child, out);
+		}
 	}
 
 	/**
@@ -560,7 +678,64 @@ public class ElementKeyMap {
 	public static ShortOpenHashSet getFactorykeyset() {
 		return factoryKeySet;
 	}
-
+	public static void cleanUpUnusedBlockIds() throws IOException{
+		Iterator<Entry<Object, Object>> iterator = properties.entrySet().iterator();
+		while(iterator.hasNext()){
+			Entry<Object, Object> e = iterator.next();
+			short val = Short.parseShort(e.getValue().toString());
+			if(val < 1792 && !ElementKeyMap.keySet.contains(val)){
+				iterator.remove();
+				System.err.println("REMOVED: "+e.getKey());
+			}
+		}
+		BufferedReader r = new BufferedReader(new FileReader(configFile));
+		String line;
+		StringBuffer b = new StringBuffer();
+		while((line = r.readLine()) != null){
+			b.append(line+"\n");
+		}
+		r.close();
+		Properties rep = new Properties();
+		for(short type : ElementKeyMap.keySet){
+			ElementInformation info = getInfo(type);
+			String idName = info.getNameUntranslated().toUpperCase(Locale.ENGLISH).replaceAll("\\s", "_");
+			int i = 0;
+			String n = idName;
+			while((rep.get(n) != null && rep.get(n) != info) || (properties.get(n) != null && properties.get(n) != info)){
+				n = idName+"_"+i;
+				i++;
+			}
+			idName = n;
+			Iterator<Entry<Object, Object>> et = properties.entrySet().iterator();
+			while(et.hasNext()){
+				Entry<Object, Object> e = et.next();
+				short val = Short.parseShort(e.getValue().toString());
+				if(val < 1792 && val == type && !idName.equals(e.getKey().toString())){
+					
+					int index = -1;
+					while((index = b.indexOf("\""+e.getKey().toString()+"\"")) >= 0){
+						b.replace(index+1, index+e.getKey().toString().length()+1, idName);
+						System.err.println("REPLACE: "+index+"; "+(index+e.getKey().toString().length())+": "+e.getKey().toString()+" -> "+idName);
+					}
+					while((index = b.indexOf(">"+e.getKey().toString()+"<")) >= 0){
+						b.replace(index+1, index+e.getKey().toString().length()+1, idName);
+						System.err.println("REPLACE: "+index+"; "+(index+e.getKey().toString().length())+": "+e.getKey().toString()+" -> "+idName);
+					}
+							
+					et.remove();
+					System.err.println("RENAMED: "+e.getKey()+" -> "+idName);
+					rep.put(idName, e.getValue());
+					break;
+				}
+			}
+		}
+		BufferedWriter w = new BufferedWriter(new FileWriter(configFile));
+		w.write(b.toString());
+		w.close();
+		
+		properties.putAll(rep);
+		writePropertiesOrdered();
+	}
 	public static ElementInformation getInfoFast(short type) {
 		return infoArray[type];
 	}
@@ -628,12 +803,31 @@ public class ElementKeyMap {
 
 		}
 		ShortArrayList signal = new ShortArrayList();
-		for (Entry<Short, ElementInformation> e : informationKeyMap.entrySet()) {
+		for (it.unimi.dsi.fastutil.shorts.Short2ObjectMap.Entry<ElementInformation> e : informationKeyMap.short2ObjectEntrySet()) {
 			e.getValue().onInit();
 			if(e.getValue().isSignal()){
-				signal.add(e.getKey());
+				signal.add(e.getShortKey());
 			}
-			lodShapeArray[e.getKey()] = e.getValue().hasLod();
+			lodShapeArray[e.getShortKey()] = e.getValue().hasLod();
+			
+			
+			/**
+			 * use to set shoppable on all reactor blocks
+			 */
+//			if(e.getValue().isReactorChamberAny() 
+//				|| e.getShortKey() == ElementKeyMap.REACTOR_CONDUIT
+//				|| e.getShortKey() == ElementKeyMap.REACTOR_MAIN
+//				|| e.getShortKey() == ElementKeyMap.REACTOR_STABILIZER){
+//					e.getValue().setShoppable(false);;
+//			}
+			
+			//			System.err.println("CALC DYN PRICE: "+e.getValue().dynamicPrice);
+			
+//			if(e.getValue().isReactorChamberSpecific()){
+//				short[] textureIds = getInfo(e.getValue().chamberRoot).getTextureIds();
+//					e.getValue().setTextureId(Arrays.copyOf(textureIds, textureIds.length));
+//					e.getValue().setMaxHitPoints(getInfo(e.getValue().chamberRoot).getMaxHitPoints());
+//			}
 		}
 		signal.toArray((signalArray = new short[signal.size()]));
 		if (projected.size() > 0) {
@@ -643,7 +837,7 @@ public class ElementKeyMap {
 			factoryInfoArray[s] = true;
 			getInfo(s).getFactory().enhancer = FACTORY_INPUT_ENH_ID;
 		}
-		sortedByName = new ObjectArrayList<ElementInformation>(informationKeyMap.values());
+		sortedByName = new ObjectArrayList(informationKeyMap.values());
 
 		Collections.sort(sortedByName, new Comparator<ElementInformation>() {
 			@Override
@@ -652,30 +846,123 @@ public class ElementKeyMap {
 			}
 		});
 		initialized = true;
-
+		
 		for (Entry<Short, ElementInformation> e : informationKeyMap.entrySet()) {
-			if (!(e.getValue().resourceInjection == 0 || e.getValue().getIndividualSides() == 1)) {
+			if (!(e.getValue().resourceInjection == ResourceInjectionType.OFF || e.getValue().getIndividualSides() == 1)) {
 				try {
 					throw new ParseException("BlockConfig.xml Error: " + e.getValue() + " cannot have resource injection (resOverlay) and multiple sides");
 				} catch (ParseException e1) {
 					throw new RuntimeException(e1);
 				}
 			}
-			if (!(e.getValue().resourceInjection == 0 || !e.getValue().orientatable)) {
+			if (!(e.getValue().resourceInjection == ResourceInjectionType.OFF || !e.getValue().orientatable)) {
 				try {
 					throw new ParseException("BlockConfig.xml Error: " + e.getValue() + " cannot have resource injection (resOverlay) and be orientatable");
 				} catch (ParseException e1) {
 					throw new RuntimeException(e1);
 				}
 			}
+			if(e.getValue().getSourceReference() != 0 && e.getValue().getSourceReference() != e.getKey().shortValue()){
+				e.getValue().consistence.clear();
+				e.getValue().producedInFactory = 0;
+				e.getValue().inRecipe = false;
+				e.getValue().shoppable = false;
+			}
+			if(e.getValue().getHpOldByte() == 0) {
+				e.getValue().setHpOldByte((short)e.getValue().getMaxHitPointsFull());
+			}
+			if(e.getValue().slabIds != null || e.getValue().styleIds != null || e.getValue().wildcardIds != null){
+				ShortArrayList sl = new ShortArrayList();
+				
+				int wildCardIndexGen = 1;
+				if(e.getValue().wildcardIds != null){
+					for(short s : e.getValue().wildcardIds){
+						if(ElementKeyMap.isValidType(s)){
+							sl.add(s);
+							informationKeyMap.get(s).wildcardIndex = wildCardIndexGen++;
+						}else{
+							try {
+								throw new Exception("WARNING: block type reference invalid: (wildcardIds of "+e.getValue().getName()+"): "+s);
+							} catch (Exception e1) {
+								e1.printStackTrace();
+							}
+						}
+					}
+				}
+				if(e.getValue().styleIds != null){
+					for(short s : e.getValue().styleIds){
+						if(ElementKeyMap.isValidType(s)){
+							sl.add(s);
+						}else{
+							try {
+								throw new Exception("WARNING: block type reference invalid: (styleIds of "+e.getValue().getName()+"): "+s);
+							} catch (Exception e1) {
+								e1.printStackTrace();
+							}
+						}
+					}
+				}
+				if(e.getValue().slabIds != null){
+					for(short s : e.getValue().slabIds){
+						if(ElementKeyMap.isValidType(s)){
+							sl.add(s);
+						}else{
+							try {
+								throw new Exception("WARNING: block type reference invalid (slabIds of "+e.getValue().getName()+"): "+s);
+							} catch (Exception e1) {
+								e1.printStackTrace();
+							}
+						}
+					}
+				}
+				e.getValue().blocktypeIds = new short[sl.size()];
+				for(int i = 0; i < e.getValue().blocktypeIds.length; i++){
+					
+					//those items are not shoppable by default
+					informationKeyMap.get(sl.getShort(i)).shoppable = false;
+					
+					e.getValue().blocktypeIds[i] = sl.getShort(i);
+				}
+			}
+			
+			//			System.err.println("CALC DYN PRICE: "+e.getValue().dynamicPrice);
 		}
 		
 		for(int i : informationKeyMap.keySet()){
 			if(getInfo(i).getType().hasParent("Terrain")){
 				getInfo(i).setSpecialBlock(false);
 			}
+			
+			getInfo(i).recalcTotalConsistence();
+			
+			getInfo(i).sanatizeReactorValues();
+//			if(getInfo(i).isReactorChamberSpecific() && getInfo(i).chamberCapacity == 0){
+//				getInfo(i).chamberCapacity = 0.01f;
+//			}
 		}
+	}
+	
+	private static void initFixedRecipePrices(FixedRecipe fixedRecipe, boolean dynamicPrice){
+		
+		for (FixedRecipeProduct r : fixedRecipe.getRecipeProduct()){
+			//Take the sum of the output price
+			int outputPrice = 0;
+			for(FactoryResource f : r.getOutputResource()){
+				outputPrice += f.count * ElementKeyMap.getInfo(f.type).getPrice(dynamicPrice);
+			}
+			
+			for(FactoryResource f : r.getInputResource()){
+				long craftPrice = (long) (Math.ceil((double) outputPrice/ f.count));
+				
+				//use most expensive price if the same block is used in multiple fixed recipes
+				if(ElementKeyMap.getInfo(f.type).dynamicPrice < craftPrice ){
+					ElementKeyMap.getInfo(f.type).setPrice(craftPrice);
+					ElementKeyMap.getInfo(f.type).dynamicPrice = craftPrice;
+				}
+				//System.out.println("FIXED RECIPE DYN PRICE FOR: " + ElementKeyMap.getInfo(f.type).getName() + " outputPrice " + outputPrice + " and this many input blocks " + f.count);
+			}
 
+		}
 	}
 
 	private static void initFixedRecipes(FixedRecipes fixedRecipes) {
@@ -690,17 +977,144 @@ public class ElementKeyMap {
 			}
 			if (fixedRecipes.recipes.get(i).name.equals("Capsule Refinery")) {
 				ElementKeyMap.capsuleRecipe = fixedRecipes.recipes.get(i);
+				//might also need to do this for other fixed recipes
+				initFixedRecipePrices(capsuleRecipe, true);
 			}
 			if (fixedRecipes.recipes.get(i).name.equals("Personal Capsule Refinery")) {
 				ElementKeyMap.personalCapsuleRecipe = fixedRecipes.recipes.get(i);
 			}
+			//			System.out.println("RECIPE PARSED: "+fixedRecipes.recipes.get(i).toString());
 		}
 	}
 
 	public static void initializeData(File appendImport) {
 		initializeData(null, false, null, appendImport);
 	}
-
+	public static void createBlankReactorBlocks(boolean override) throws ParserConfigurationException{
+		
+		ElementCategory recCat = getCategoryHirarchy().getChild("General").getChild("Power").getChild("Chamber");
+//		assert(pwCat != null);
+//		ElementCategory recCat = new ElementCategory("Chamber", pwCat);
+//		if(!pwCat.getChildren().contains(recCat)){
+//			pwCat.getChildren().add(recCat);
+//		}
+		Object2ObjectOpenHashMap<String, ElementInformation> nw = new Object2ObjectOpenHashMap<String, ElementInformation>();
+		Short2ObjectOpenHashMap< ElementInformation> nwid = new Short2ObjectOpenHashMap< ElementInformation>();
+		final String pre = "REACTOR_CHAMBER_";
+		for(Object k : properties.keySet()){
+			short id = Short.parseShort(properties.get(k).toString());
+			
+			if(k.toString().startsWith(pre) && (override || !keySet.contains(id))){
+				String nm = k.toString().substring(pre.length(), k.toString().length());
+				System.err.println("NEW REACTOR CHAMBER: "+nm);
+				ElementInformation info = new ElementInformation(id, nm, recCat, new short[]{0,0,0,0,0,0});
+				nw.put(nm, info);
+				nwid.put(id, info);
+			}
+		}
+		
+		for(ElementInformation info : nw.values()){
+			if(!info.name.contains("_")){
+				info.chamberGeneral = true;
+			}
+		}
+		for(ElementInformation info : nw.values()){
+			if(!info.chamberGeneral){
+				String gStr = info.name.substring(0, info.name.indexOf("_"));
+				
+				ElementInformation general = nw.get(gStr);
+				if(general == null){
+					general = getInfo(Integer.parseInt(properties.get(pre+gStr).toString()));
+				}
+				assert(general != null):gStr;
+				
+				info.chamberRoot = general.id;
+				
+				String lst = info.name.substring(info.name.lastIndexOf("_")+1, info.name.length());
+				
+				try{
+					int lvl = Integer.parseInt(lst);
+					String lm = info.name.substring(0, info.name.lastIndexOf("_"));
+					if(lvl > 0){
+						String parent = lm+"_"+(lvl-1); 
+						ElementInformation p = nw.get(parent);
+						if(p == null){
+							p = getInfo(Integer.parseInt(properties.get(pre+parent).toString()));
+						}
+						assert(p != null):parent;
+						info.chamberParent = p.id;
+						ElementInformation pInfo = nwid.get((short)info.chamberParent);
+						pInfo.chamberUpgradesTo = info.id;
+					}else{
+						info.chamberParent = 0; //no parent for lvl 0
+					}
+				}catch(Exception e){
+					System.err.println("NOT UPGRADABLE: "+info+"; "+lst);
+					info.chamberParent = 0; //no parent for standalone (needs manual)
+				}
+			}
+		}
+		List<ElementInformation> ord = new ObjectArrayList<ElementInformation>(nw.values());
+		Collections.sort(ord, new Comparator<ElementInformation>(){
+			@Override
+			public int compare(ElementInformation o1, ElementInformation o2) {
+				
+				String a = "";
+				String b = "";
+				for(Entry<Object, Object> k : properties.entrySet()){
+					if(Integer.parseInt(k.getValue().toString()) == o1.id){
+						a = k.getKey().toString();
+					}
+					if(Integer.parseInt(k.getValue().toString()) == o2.id){
+						b = k.getKey().toString();
+					}
+				}
+				
+				return a.compareTo(b);
+			}
+		});
+		short texInc = 629;
+		short specInc = 629+9;
+		short curId = 0;
+		for(ElementInformation info : ord){
+			if(!info.chamberGeneral){
+				info.shoppable = false;
+				info.placable = false;
+				info.setSourceReference(info.chamberParent);
+				info.setTextureId(new short[]{curId, specInc, specInc, curId, curId, curId});
+				if(info.chamberParent == 0){
+					ElementInformation rootInfo = nwid.get((short)info.chamberRoot);
+					if(rootInfo == null){
+						rootInfo = getInfo(info.chamberRoot);
+					}
+					assert(rootInfo != null):"not found "+info+"; "+info.chamberRoot;
+					
+					rootInfo.chamberChildren.add(info.id);
+				}
+			}else{
+				info.setTextureId(new short[]{texInc, texInc, texInc, texInc, texInc, texInc});
+				curId = texInc;
+				texInc++;
+			}
+			if(!info.chamberGeneral && info.chamberParent != 0){
+				ElementInformation p = nwid.get((short)info.chamberParent);
+				if(p == null){
+					p = getInfo(info.chamberParent);
+				}
+				assert(p != null):info+" no parent: "+info.chamberParent;
+				p.chamberChildren.add(info.id);
+				info.chamberPrerequisites.add(p.id);
+			}
+		}
+		
+		for(ElementInformation info : ord){
+			System.err.println("INFO:::: "+info+"; INSERT "+(!keySet.contains(info.id)));
+			if(!keySet.contains(info.id)){
+				System.err.println("ADDING: "+info);
+//				addInformationToExisting(info);
+			}
+		}
+	}
 	public static void initializeData(File custom, boolean zipped, String properties, File appendImport) {
 		if (initialized) {
 			return;
@@ -712,9 +1126,14 @@ public class ElementKeyMap {
 			initElements(load.getInfoElements(), load.getRootCategory());
 			initFixedRecipes(load.getFixedRecipes());
 		} catch (Exception e1) {
-			e1.printStackTrace();
+			initializeData(appendImport);
 			return;
 		}
+//		try {
+//			createBlankReactorBlocks(false);
+//		} catch (ParserConfigurationException e) {
+//			e.printStackTrace();
+//		}
 
 
 		keyArray = new short[keySet.size()];
@@ -723,38 +1142,65 @@ public class ElementKeyMap {
 			keyArray[i] = s;
 			i++;
 		}
-		doorTypes.clear();
-		for (ElementInformation in : infoArray) {
-			if (in != null && in.isDoor()) {
-				doorTypes.add(in.id);
-			}
-		}
-		doorTypes.trim();
-
 		
+		doorTypes.clear();
 		inventoryTypes.clear();
-		for (ElementInformation in : infoArray) {
-			if (in != null && in.isInventory()) {
+		lightTypes.clear();
+		chamberAnyTypes.clear();
+		chamberGeneralTypes.clear();
+		for (short type : keyArray) {
+			ElementInformation in = infoArray[type];
+			if (in.isInventory()) {
 				inventoryTypes.add(in.id);
 			}
+			if (in.getSourceReference() != 0) {
+				sourcedTypes.add(in.id);
+			}
+			if (in.isLightSource()) {
+				lightTypes.add(in.id);
+			}
+			if (in.isDoor()) {
+				doorTypes.add(in.id);
+			}
+			if(in.isReactorChamberAny()){
+				chamberAnyTypes.add(in.id);
+			}
+			if(in.isReactorChamberGeneral()){
+				chamberGeneralTypes.add(in.id);
+			}
+			
+//			if(in != null && in.slab != 0){
+//				in.setBuildIconToFree();
+//			}
 		}
 		inventoryTypes.trim();
+		lightTypes.trim();
+		doorTypes.trim();
 		assert (checkConflicts());
 
 	}
-
 	private static boolean checkConflicts() {
-		for (short s : keySet) {
-			for (short s0 : keySet) {
-				if (s != s0 && getInfo(s).getSlab() == 0 && getInfo(s0).getSlab() == 0 && getInfo(s).getBuildIconNum() == getInfo(s0).getBuildIconNum()) {
-					System.err.println("[INFO] BuildIconConflict: " + toString(s) + " --- " + toString(s0) + "; " + getInfo(s).getBuildIconNum() + "; " + getInfo(s0).getBuildIconNum());
-					return false;
+		for (short s : keyArray) {
+			for (short s0 : keyArray) {
+				if (s != s0 && !getInfo(s).isReactorChamberAny() && !getInfo(s).isDeprecated() && getInfo(s).isShoppable() && !getInfo(s0).isReactorChamberAny() && getInfo(s).getSlab() == 0 && getInfo(s0).getSlab() == 0 && getInfo(s).getBuildIconNum() == getInfo(s0).getBuildIconNum()) {
+					try {
+						throw new Exception("[INFO] BuildIconConflict: " + toString(s) + " --- " + toString(s0) + "; " + getInfo(s).getBuildIconNum() + "; " + getInfo(s0).getBuildIconNum());
+					} catch (Exception e) {
+						e.printStackTrace();
+					}
+					return true;
 				}
 			}
 		}
 		return true;
 	}
 
+	public static void initializeDeathStarData() throws ParserConfigurationException {
+//		ElementInformation infoCore = new ElementInformation(DEATHSTAR_CORE_ID, "Deathstar Core", DeathStarElement.class, DEATHSTAR_CORE_ID);
+//		infoCore.setAmour((short)30);
+//		infoCore.setMaxHitPoints((short)1000);
+//		add(DEATHSTAR_CORE_ID , infoCore);
+	}
 
 	public static boolean isValidType(short type) {
 		return type >= 0 && type < infoArray.length && infoArray[type] != null;
@@ -835,7 +1281,7 @@ public class ElementKeyMap {
 	public static void reparseProperties() throws IOException {
 		// Read properties file.
 		properties = new Properties();
-		FileInputStream fileInputStream = new FileInputStream(MediawikiExport.properties.getProperty("blockconfigpath")+"BlockTypes.properties");
+		FileInputStream fileInputStream = new FileInputStream("./data/config/BlockTypes.properties");
 		properties.load(fileInputStream);
 
 	}
@@ -855,11 +1301,12 @@ public class ElementKeyMap {
 	private static void writeCatToXML(ElementCategory h, Element root, Document doc) throws CannotAppendXMLException {
 
 		org.w3c.dom.Element child = doc.createElement(h.getCategory());
+		//		System.err.println("[XML] cat "+ElementParser.getStringFromType(h.getCategory()));
 		for (ElementCategory e : h.getChildren()) {
 			writeCatToXML(e, child, doc);
 		}
 		for (ElementInformation info : h.getInfoElements()) {
-			info.appendXML(doc, child);
+//			info.appendXML(doc, child);
 		}
 		root.appendChild(child);
 	}
@@ -909,13 +1356,16 @@ public class ElementKeyMap {
 			Transformer trans = transfac.newTransformer();
 			trans.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
 			trans.setOutputProperty(OutputKeys.INDENT, "yes");
-
+			trans.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
 			// create string from xml tree
 			StringWriter sw = new StringWriter();
 			StreamResult result = new StreamResult(file);
 			DOMSource source = new DOMSource(doc);
 			trans.transform(source, result);
+			// String xmlString = sw.toString();
 
+			// print xml
+			// System.out.println("Here's the xml:\n\n" + xmlString);
 			return file;
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -924,7 +1374,7 @@ public class ElementKeyMap {
 	}
 
 	public static File writeDocument(String path, ElementCategory h, FixedRecipes fixedRecipes) {
-		File file = new File(path);
+		File file = new FileExt(path);
 		return writeDocument(file, h, fixedRecipes);
 	}
 
@@ -945,8 +1395,8 @@ public class ElementKeyMap {
 		}
 	}
 
-	public static String toString(short type) {
-		return ElementKeyMap.exists(type) ? ElementKeyMap.getInfo(type).toString() : "Unknown(" + type + ")";
+	public static String toString(int type) {
+		return toString((short)type);
 	}
 
 	public static String toString(Collection<Short> controlling) {
@@ -1001,65 +1451,43 @@ public class ElementKeyMap {
 				ElementKeyMap.getFactorykeyset().contains(type);
 	}
 
-	public static void createBlockSlabs(ElementInformation info) throws ParseException {
-		if(info.getSlab() != 0){
-			throw new ParseException("Cannot create slab of slab");
-		}
-		assert(info.idName != null);
-		String quarterName = info.idName + "_"+"QUARTER_SLAB";
-		String halfName = info.idName + "_"+"HALF_SLAB";
-		String tQuartName = info.idName + "_"+"THREE_QUARTER_SLAB";
-		
-		int quarterId = insertIntoProperties(quarterName);
-		int halfId = insertIntoProperties(halfName);
-		int threeQuarterId = insertIntoProperties(tQuartName);
-		
-		ElementInformation copyQuarter = new ElementInformation(info, (short)quarterId, info.name +" 1/4");
-		ElementInformation copyHalf = new ElementInformation(info, (short)halfId, info.name +" 1/2");
-		ElementInformation copyThreeQuarter = new ElementInformation(info, (short)threeQuarterId, info.name +" 3/4");
-		
-		
-		
-		copyThreeQuarter.name = info.name +" 3/4";
-		copyHalf.name = info.name +" 1/2";
-		copyQuarter.name = info.name +" 1/4";
-		
-		copyThreeQuarter.slab = (1);
-		copyHalf.slab = (2);
-		copyQuarter.slab = (3);
-		
-		copyThreeQuarter.slabReference = info.getId();
-		copyHalf.slabReference = info.getId();
-		copyQuarter.slabReference = info.getId();
-		
-		copyThreeQuarter.shoppable = false;
-		copyHalf.shoppable = false;
-		copyQuarter.shoppable = false;
-		
-		copyThreeQuarter.inRecipe = false;
-		copyHalf.inRecipe = false;
-		copyQuarter.inRecipe = false;
-		
-		copyThreeQuarter.orientatable = true;
-		copyHalf.orientatable = true;
-		copyQuarter.orientatable = true;
-		
-		copyThreeQuarter.producedInFactory = 0;
-		copyHalf.producedInFactory = 0;
-		copyQuarter.producedInFactory = 0;
-		
-		try {
-			ElementKeyMap.addInformationToExisting(copyQuarter);
-			ElementKeyMap.addInformationToExisting(copyHalf);
-			ElementKeyMap.addInformationToExisting(copyThreeQuarter);
-		
-		
-			info.slabIds = new short[]{copyThreeQuarter.getId(), copyHalf.getId(), copyQuarter.getId()};
-		} catch (ParserConfigurationException e) {
-			e.printStackTrace();
+	public static void createBlockStyleReferencesFromName(ElementInformation info) throws ParseException {
+		if(info.getBlockStyle() == BlockStyle.NORMAL){
+			ObjectArrayList<ElementInformation> e = new ObjectArrayList<ElementInformation>();
+			for(int i = 0; i < infoArray.length; i++){
+				ElementInformation oth = infoArray[i] ;
+				if(oth != null && oth != info && oth.getBlockStyle() != BlockStyle.NORMAL && oth.getBlockStyle() != BlockStyle.NORMAL24){
+					if(oth.name.toLowerCase(Locale.ENGLISH).startsWith(info.name.toLowerCase(Locale.ENGLISH))){
+						oth.setSourceReference(info.id);
+						e.add(oth);
+					}
+				}
+			}
+			
+			short[] styles = new short[e.size()];
+			
+			for(int i = 0; i < styles.length; i++){
+				styles[i] = e.get(i).id;
+			}
+			info.styleIds = styles;
 		}
 	}
-	
+	public static void deleteBlockStyleReferences(ElementInformation info) {
+		if(info.styleIds != null){
+			for(short e : info.styleIds){
+				getInfoFast(e).setSourceReference(0);
+			}
+			info.styleIds = null;
+		}
+	}
+	public static void deleteWildCardReferences(ElementInformation info) {
+		if(info.wildcardIds != null){
+			for(short e : info.wildcardIds){
+				getInfoFast(e).setSourceReference(0);
+			}
+			info.wildcardIds = null;
+		}
+	}
 	public static int insertIntoProperties(String idName){
 		assert(idName != null);
 		if(properties.containsKey(idName)){
@@ -1094,6 +1522,59 @@ public class ElementKeyMap {
 	}
 	public static boolean isLodShape(int id){
 		return id > 0 && id < lodShapeArray.length && lodShapeArray[id];
+	}
+	public static class LinkedProperties extends Properties {
+	    /**
+		 * 
+		 */
+		private static final long serialVersionUID = 1L;
+		private final Set<Object> keys = new LinkedHashSet<Object>();
+
+	    public LinkedProperties() {
+	    }
+
+	    public Iterable<Object> orderedKeys() {
+	        return Collections.list(keys());
+	    }
+
+	    @Override
+		public Enumeration<Object> keys() {
+	        return Collections.<Object>enumeration(keys);
+	    }
+
+	    @Override
+		public Object put(Object key, Object value) {
+	        keys.add(key);
+	        return super.put(key, value);
+	    }
+	}
+	public static void main(String[] args) throws IOException{
+		LinkedProperties properties = new LinkedProperties();
+		FileInputStream fileInputStream = new FileInputStream("./data/config/BlockTypes.properties");
+		properties.load(fileInputStream);
+		
+		IntOpenHashSet taken = new IntOpenHashSet();
+		for(Object e : properties.values()){
+			try{
+				taken.add(Integer.parseInt(e.toString()));
+			}catch(NumberFormatException ex){}
+		}
+		for(Entry<Object, Object> e : properties.entrySet()){
+			try{
+				Integer.parseInt(e.getValue().toString());
+			}catch(NumberFormatException ex){
+				for(int i = 100; i < 1000000; i++){
+					if(!taken.contains(i)){
+						e.setValue(String.valueOf(i));
+						taken.add(i);
+						break;
+					}
+				}
+				
+			}
+		}
+		System.err.println("CHK: "+properties.size());
+		properties.store(new FileWriter("./data/config/BlockTypes.properties"), "");
 	}
 	public static void writePropertiesOrdered(){
 		try {
@@ -1147,8 +1628,64 @@ public class ElementKeyMap {
 	}
 
 	public static boolean isToStashConnectable(short fromType) {
-		return fromType == ElementKeyMap.SHIPYARD_COMPUTER || fromType == ElementKeyMap.SHOP_BLOCK_ID;
+		return fromType == ElementKeyMap.SHIPYARD_COMPUTER || fromType == ElementKeyMap.SHOP_BLOCK_ID || fromType == ElementKeyMap.MINE_LAYER;
 	}
+	
+	public static boolean isReactor(short type) {
+		return type == ElementKeyMap.REACTOR_MAIN 
+			|| type == ElementKeyMap.REACTOR_STABILIZER 
+			||  type == ElementKeyMap.REACTOR_CONDUIT 
+			|| isChamber(type);
+	}
+
+	public static boolean isChamber(short type) {
+		return ElementKeyMap.isValidType(type) && (ElementKeyMap.getInfoFast(type).isReactorChamberAny());
+	}
+
+	public static boolean isInit() {
+		return initialized;
+	}
+
+	public static boolean isRailLoadOrUnload(short type) {
+		return type == RAIL_LOAD || type == RAIL_UNLOAD;
+	}
+
+	public static ElementInformation getMultiBaseType(short type) {
+		if (ElementKeyMap.isValidType(type)) {
+			
+			ElementInformation infoPar = ElementKeyMap.getInfo(type);
+			ElementInformation info;
+			if(infoPar.getSourceReference() != 0){
+				info = ElementKeyMap.getInfo(infoPar.getSourceReference());
+			}else{
+				info = infoPar;
+			}
+			if(info.blocktypeIds != null){
+				return info;
+			}
+		}
+		return null;
+	}
+
+	public static short convertToByteHP(short type, int hpFull) {
+		return ElementKeyMap.getInfo(type).convertToByteHp(hpFull);
+	}
+
+	public static int convertToFullHP(short type, short hpByte) {
+		return ElementKeyMap.getInfo(type).convertToFullHp(hpByte);
+	}
+
+	public static short convertSourceReference(short type) {
+		if(isValidType(type)) {
+			short sc = (short) getInfoFast(type).getSourceReference();
+			return sc != 0 ? sc : type;
+		}
+		return type;
+	}
+
+	
+
+
 
 
 }

@@ -1,18 +1,23 @@
 package org.schine.starmade.data.element;
 
 import it.unimi.dsi.fastutil.ints.Int2IntOpenHashMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import it.unimi.dsi.fastutil.objects.ObjectOpenHashSet;
 import it.unimi.dsi.fastutil.shorts.ShortArrayList;
+import it.unimi.dsi.fastutil.shorts.ShortIterator;
+import it.unimi.dsi.fastutil.shorts.ShortList;
+import it.unimi.dsi.fastutil.shorts.ShortOpenHashSet;
+import it.unimi.dsi.fastutil.shorts.ShortSet;
 
 import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -20,17 +25,24 @@ import javax.swing.JPanel;
 import javax.vecmath.Vector3f;
 import javax.vecmath.Vector4f;
 
-import org.schine.starmade.common.StringTools;
+import org.schine.starmade.ElementCountMap;
+import org.schine.starmade.ElementReactorChange;
+import org.schine.starmade.data.element.annotation.ElemType;
 import org.schine.starmade.data.element.annotation.Element;
-import org.schine.starmade.data.element.exception.CannotAppendXMLException;
+import org.schine.starmade.data.element.exception.ElementParserException;
 import org.schine.starmade.data.element.factory.BlockFactory;
 import org.schine.starmade.data.element.factory.FactoryResource;
 import org.schine.starmade.data.element.factory.FixedRecipe;
 import org.schine.starmade.data.element.factory.FixedRecipeProduct;
 import org.schine.starmade.data.element.factory.RecipeInterface;
+import org.schine.starmade.effect.InterEffectSet;
 import org.w3c.dom.Document;
+import org.w3c.dom.Node;
 
+import com.mxgraph.layout.mxIGraphLayout;
+import com.mxgraph.layout.mxParallelEdgeLayout;
 import com.mxgraph.swing.mxGraphComponent;
+import com.mxgraph.util.mxConstants;
 import com.mxgraph.view.mxGraph;
 
 
@@ -50,146 +62,292 @@ public class ElementInformation implements Comparable<ElementInformation> {
 	public static final int RT_MANUFACTORY = 4;
 	public static final int RT_ADVANCED = 5;
 	public static final int RT_CAPSULE = 6;
+	public static final int CHAMBER_APPLIES_TO_SELF = 0;
+	public static final int CHAMBER_APPLIES_TO_SECTOR = 1;
+	
 	//not write as tag (its an attribute)
-	@Element(tag = "ID", writeAsTag = false, canBulkChange = false)
+	@Element(writeAsTag = false, canBulkChange = false, parser = ElemType.ID)
 	public final short id;
 	
-	@Element(tag = "Texture", writeAsTag = false, canBulkChange = false)
+	@Element(writeAsTag = false, canBulkChange = false, parser = ElemType.TEXTURE)
 	private short[] textureId;	
 	
-	@Element(tag = "Consistence", consistence = true)
-	public final ArrayList<FactoryResource> consistence = new ArrayList<FactoryResource>();
-	@Element(tag = "CubatomConsistence", cubatomConsistence = true)
-	public
-	final ArrayList<FactoryResource> cubatomConsistence = new ArrayList<FactoryResource>();
-	@Element(tag = "ControlledBy", collectionElementTag = "Element", collectionType = "blockTypes")
-	public final Set<Short> controlledBy = new HashSet<Short>();
-	@Element(tag = "Controlling", collectionElementTag = "Element", collectionType = "blockTypes")
-	public final Set<Short> controlling = new HashSet<Short>();
 	
-	@Element(tag = "RecipeBuyResource", collectionElementTag = "Element", collectionType = "blockTypes")
-	public final List<Short> recipeBuyResources = new ShortArrayList();
-	public final ObjectOpenHashSet<String> parsed = new ObjectOpenHashSet<String>(2048);
-	private final int[] textureLayerMapping = new int[6];
-	private final int[] textureIndexLocalMapping = new int[6];
-	private final int[] textureLayerMappingActive = new int[6];
-	private final int[] textureIndexLocalMappingActive = new int[6];
-	@Element(tag = "Name", writeAsTag = false, canBulkChange = false)
-	public String name;
-	public ElementCategory type;
-	@Element(tag = "BuildIcon", writeAsTag = false, canBulkChange = false)
-	public int buildIconNum = 62;
-	@Element(tag = "FullName", canBulkChange = false)
-	public String fullName = "";
-	@Element(from = 0, to = Integer.MAX_VALUE, tag = "Price")
-	public long price = 100;
-	@Element(tag = "Description", textArea = true)
-	public String description = "undefined description";
-	@Element(tag = "BlockResourceType", states = {"0", "1", "2", "3", "4", "5", "6"}, stateDescs = {"ore", "plant", "basic", "Cubatom-Splittable", "manufactory", "advanced", "capsule"})
-	public int blockResourceType = 2;
-	@Element(tag = "ProducedInFactory", states = {"0", "1", "2", "3", "4", "5"}, stateDescs = {"none", "capsule refinery", "micro assembler", "basic factory", "standard factory", "advanced factory"})
-	public int producedInFactory = 0;
-	@Element(tag = "BasicResourceFactory", type = true)
-	public short basicResourceFactory = 0;
-	@Element(from = 0, to = 1000000, tag = "FactoryBakeTime")
-	public float factoryBakeTime = 5;
-	@Element(tag = "InventoryGroup", inventoryGroup = true)
-	public String inventoryGroup = "";
-	@Element(tag = "Factory", factory = true)
-	public BlockFactory factory;
-	@Element(tag = "Animated")
-	public boolean animated;
-	@Element(from = 0, to = 100, tag = "Armour")
-	public float amour = 0;
-	@Element(from = 0, to = Integer.MAX_VALUE, tag = "ArmorHPContribution")
-	public int armourHP = 0;
-	@Element(from = 0, to = Integer.MAX_VALUE, tag = "StructureHPContribution")
-	public int structureHP = 0;
-	@Element(tag = "Transparency")
-	public boolean blended;
-	@Element(tag = "InShop")
-	public boolean shoppable = true;
-	@Element(tag = "Orientation")
-	public boolean orientatable;
-	@Element(tag = "Slab", states = {"0", "1", "2", "3"}, stateDescs = {"full block", "3/4 block", "1/2 block", "1/4 block"})
-	public int slab = 0;
-	@Element(tag = "Enterable")
-	public boolean enterable;
-	@Element(tag = "Mass")
-	public float mass = 0.1f;
+	@Element(consistence = true, parser = ElemType.CONSISTENCE)
+	public final List<FactoryResource> consistence = new ObjectArrayList<FactoryResource>();
 	
-	@Element(tag = "Volume")
-	public float volume = -1.0f;
+	@Element(cubatomConsistence = true, parser = ElemType.CUBATON_CONSISTENCE)
+	public final List<FactoryResource> cubatomConsistence = new ObjectArrayList<FactoryResource>();
 	
-	@Element(from = 1, to = 255, tag = "Hitpoints")
-	public short maxHitPoints = 100;
-	@Element(tag = "Placable")
-	public boolean placable = true;
-	@Element(tag = "InRecipe")
-	public boolean inRecipe = shoppable;
-	@Element(tag = "CanActivate")
-	public boolean canActivate;
-	@Element(states = {"1", "3", "6"}, tag = "IndividualSides", updateTextures = true)
-	public int individualSides = 1;
-	@Element(tag = "SideTexturesPointToOrientation")
-	public boolean sideTexturesPointToOrientation = false;
-	@Element(tag = "HasActivationTexture")
-	public boolean hasActivationTexure;
-	@Element(tag = "MainCombinationController")
-	public boolean mainCombinationController;
-	@Element(tag = "SupportCombinationController")
-	public boolean supportCombinationController;
-	@Element(tag = "EffectCombinationController")
-	public boolean effectCombinationController;
-	@Element(tag = "Physical")
-	public boolean physical = true;
-	@Element(tag = "BlockStyle", states = {"0", "1", "2", "3", "4", "5", "6"}, stateDescs = {"block", "wedge", "corner", "sprite", "tetra", "penta", "24Normal"})
-	public int blockStyle;
-	@Element(tag = "LightSource")
-	public boolean lightSource;
+	@Element( collectionElementTag = "Element", elementSet = true, collectionType = "blockTypes", parser = ElemType.CONTROLLED_BY)
+	public final ShortSet controlledBy = new ShortOpenHashSet();
+	
+	@Element(collectionElementTag = "Element", elementSet = true, collectionType = "blockTypes", parser = ElemType.CONTROLLING)
+	public final ShortSet controlling = new ShortOpenHashSet();
+	
+	@Element(collectionElementTag = "Element", elementSet = true, collectionType = "blockTypes", parser = ElemType.RECIPE_BUY_RESOURCE)
+	public final ShortList recipeBuyResources = new ShortArrayList();
 
-	@Element(tag = "Door")
-	public boolean door;
-	@Element(tag = "Deprecated")
-	public boolean deprecated;
-	@Element(tag = "CubatomCompound", cubatom = true)
-	public Object[] cubatomCompound;
-	public long dynamicPrice = -1;
-	@Element(tag = "ResourceInjection", states = {"0", "1", "17"}, stateDescs = {"off", "ore", "flora"})
-	public int resourceInjection = 0;
-	@Element(from = 0, to = 100000, tag = "ExplosionAbsorbtion")
-	public float explosionAbsorbtion;
-	@Element(tag = "LightSourceColor", vector4f = true)
-	public final Vector4f lightSourceColor = new Vector4f(1, 1, 1, 1);
+	public final ObjectOpenHashSet<String> parsed = new ObjectOpenHashSet<String>(2048);
 	
-	@Element(tag = "SlabIds", canBulkChange = false)
+	private final int[] textureLayerMapping = new int[6];
+	
+	private final int[] textureIndexLocalMapping = new int[6];
+	
+	private final int[] textureLayerMappingActive = new int[6];
+	
+	private final int[] textureIndexLocalMappingActive = new int[6];
+	
+	
+	@Element(from = 0, to = 10000000, parser = ElemType.ARMOR_VALUE)
+	public float armorValue;
+	
+	@Element(writeAsTag = false, canBulkChange = false, parser = ElemType.NAME)
+	public String name;
+	
+	public ElementCategory type;
+	
+	@Element(parser = ElemType.EFFECT_ARMOR, canBulkChange = true)
+	public InterEffectSet effectArmor = new InterEffectSet();
+	
+	@Element(writeAsTag = false, canBulkChange = false, parser = ElemType.BUILD_ICON)
+	public int buildIconNum = 62;
+	
+	@Element( canBulkChange = false, parser = ElemType.FULL_NAME)
+	public String fullName = "";
+	
+	@Element(from = 0, to = Integer.MAX_VALUE,  parser = ElemType.PRICE)
+	public long price = 100;
+	
+	@Element( textArea = true, parser = ElemType.DESCRIPTION)
+	public String description = "undefined description";
+	
+	@Element( states = {"0", "1", "2", "3", "4", "5", "6"}, stateDescs = {"ore", "plant", "basic", "Cubatom-Splittable", "manufactory", "advanced", "capsule"}, parser = ElemType.BLOCK_RESOURCE_TYPE)
+	public int blockResourceType = 2;
+	
+	@Element( states = {"0", "1", "2", "3", "4", "5"}, stateDescs = {"none", "capsule refinery", "micro assembler", "basic factory", "standard factory", "advanced factory"}, parser = ElemType.PRODUCED_IN_FACTORY)
+	public int producedInFactory = 0;
+	
+	@Element( type = true, parser = ElemType.BASIC_RESOURCE_FACTORY)
+	public short basicResourceFactory = 0;
+	
+	@Element(from = 0, to = 1000000, parser = ElemType.FACTORY_BAKE_TIME)
+	public float factoryBakeTime = 5;
+	
+	@Element( inventoryGroup = true, parser = ElemType.INVENTORY_GROUP)
+	public String inventoryGroup = "";
+	
+	@Element( factory = true, parser = ElemType.FACTORY)
+	public BlockFactory factory;
+	
+	@Element( parser = ElemType.ANIMATED)
+	public boolean animated;
+	
+	@Element(from = 0, to = Integer.MAX_VALUE,  parser = ElemType.STRUCTURE_HP)
+	public int structureHP = 0;
+	
+	@Element( parser = ElemType.TRANSPARENCY)
+	public boolean blended;
+	
+	@Element( parser = ElemType.IN_SHOP)
+	public boolean shoppable = true;
+	
+	@Element( parser = ElemType.ORIENTATION)
+	public boolean orientatable;
+	
+	@Element( selectBlock = true, parser = ElemType.BLOCK_COMPUTER_REFERENCE)
+	public int computerType;
+	
+	@Element( states = {"0", "1", "2", "3"}, stateDescs = {"full block", "3/4 block", "1/2 block", "1/4 block"}, parser = ElemType.SLAB)
+	public int slab = 0;
+	
+	@Element( canBulkChange = false, parser = ElemType.SLAB_IDS)
 	public short[] slabIds = null;
 	
-	@Element(tag = "SlabReference", canBulkChange = false, editable = false)
-	public int slabReference = 0;
+	@Element( canBulkChange = false, parser = ElemType.STYLE_IDS)
+	public short[] styleIds = null;
 	
-	@Element(tag = "OnlyDrawnInBuildMode", editable = true, canBulkChange = true)
+	@Element( canBulkChange = false, parser = ElemType.WILDCARD_IDS)
+	public short[] wildcardIds = null;
+	
+	public short[] blocktypeIds;
+	
+	
+	@Element( canBulkChange = false, editable = false, parser = ElemType.SLAB_REFERENCE)
+	public int sourceReference = 0;
+	
+	/**
+	 * GeneralChamber: true if the block is a general chamber block that can be later specified (e.g. Jump Chamber (general) -> Jump Distance (specified))
+	 */
+	@Element( parser = ElemType.GENERAL_CHAMBER)
+	public boolean chamberGeneral;
+	
+	@Element(writeAsTag = false, parser = ElemType.EDIT_REACTOR)
+	public ElementReactorChange change;
+	
+	
+	@Element( parser = ElemType.CHAMBER_CAPACITY)
+	public float chamberCapacity = 0.0f;
+	
+	/**
+	 * ChamberRoot: the top level chamber (jump distance 0)
+	 */
+	@Element( editable = false, selectBlock = true, parser = ElemType.CHAMBER_ROOT)
+	public int chamberRoot;
+	
+	/**
+	 * ChamberParent: the parent of a chamber (jump distance 1 has jump distance 0 as parent)
+	 */
+	@Element( editable = false, selectBlock = true, parser = ElemType.CHAMBER_PARENT)
+	public int chamberParent;
+	
+	@Element( editable = false, selectBlock = true, parser = ElemType.CHAMBER_UPGRADES_TO)
+	public int chamberUpgradesTo;
+	
+	public static final int CHAMBER_PERMISSION_ANY = 0;
+	public static final int CHAMBER_PERMISSION_SHIP = 1;
+	public static final int CHAMBER_PERMISSION_STATION = 2;
+	public static final int CHAMBER_PERMISSION_PLANET = 4;
+	@Element( states = {"0", "1", "6", "2", "4"}, stateDescs = {"Any", "Ship Only", "Station/Planet Only", "Station Only", "Planet Only"}, parser = ElemType.CHAMBER_PERMISSION)
+	public int chamberPermission = 0;
+	
+	/**
+	 * ChamberPrerequisites: chambers needed to specify this one
+	 */
+	@Element( editable = false, canBulkChange = false, shortSet = true, parser = ElemType.CHAMBER_PREREQUISITES)
+	public final ShortSet chamberPrerequisites = new ShortOpenHashSet();
+	
+	
+	/**
+	 * ChamberMutuallyExclusive: chamber trees that are mutually exclusive and cannot be built on the same entity
+	 */
+	@Element(  editable = true, canBulkChange = true, shortSet = true, parser = ElemType.CHAMBER_MUTUALLY_EXCLUSIVE)
+	public final ShortSet chamberMutuallyExclusive = new ShortOpenHashSet();
+	
+	/**
+	 * ChamberChildren: what branches off this chamber
+	 */
+	@Element( canBulkChange = false, editable = false, shortSet = true, parser = ElemType.CHAMBER_CHILDREN)
+	public final ShortSet chamberChildren = new ShortOpenHashSet();
+	
+	@Element( collectionElementTag = "Element", configGroupSet = true, collectionType = "String", stringSet= true, parser = ElemType.CHAMBER_CONFIG_GROUPS)
+	public List<String> chamberConfigGroupsLowerCase = new ObjectArrayList<String>();
+	
+	@Element( states = {"0", "1"}, stateDescs = {"self", "sector"}, parser = ElemType.CHAMBER_APPLIES_TO)
+	public int chamberAppliesTo = 0;
+	
+	@Element( editable = true, canBulkChange = true, parser = ElemType.REACTOR_HP)
+	public int reactorHp;
+	
+	@Element( editable = true, canBulkChange = true, parser = ElemType.REACTOR_GENERAL_ICON_INDEX)
+	public int reactorGeneralIconIndex;
+	
+	@Element( parser = ElemType.ENTERABLE)
+	public boolean enterable;
+	
+	@Element( parser = ElemType.MASS)
+	public float mass = 0.1f;
+	
+	@Element( parser = ElemType.VOLUME)
+	public float volume = -1.0f;
+	
+	@Element(from = 1, to = Integer.MAX_VALUE,  parser = ElemType.HITPOINTS)
+	public int maxHitPointsFull = 100;
+	
+	@Element( parser = ElemType.PLACABLE)
+	public boolean placable = true;
+	
+	@Element( parser = ElemType.IN_RECIPE)
+	public boolean inRecipe = shoppable;
+	
+	@Element( parser = ElemType.CAN_ACTIVATE)
+	public boolean canActivate;
+	
+	@Element(states = {"1", "3", "6"},  updateTextures = true, parser = ElemType.INDIVIDUAL_SIDES)
+	public int individualSides = 1;
+	
+	@Element( parser = ElemType.SIDE_TEXTURE_POINT_TO_ORIENTATION)
+	public boolean sideTexturesPointToOrientation = false;
+	
+	@Element( parser = ElemType.HAS_ACTIVE_TEXTURE)
+	public boolean hasActivationTexure;
+	
+	@Element( parser = ElemType.MAIN_COMBINATION_CONTROLLER)
+	public boolean mainCombinationController;
+	
+	@Element( parser = ElemType.SUPPORT_COMBINATION_CONTROLLER)
+	public boolean supportCombinationController;
+	
+	@Element( parser = ElemType.EFFECT_COMBINATION_CONTROLLER)
+	public boolean effectCombinationController;
+	
+	@Element( parser = ElemType.PHYSICAL)
+	public boolean physical = true;
+	
+	@Element( parser = ElemType.BLOCK_STYLE)
+	public BlockStyle blockStyle = BlockStyle.NORMAL;
+	
+	@Element( parser = ElemType.LIGHT_SOURCE)
+	public boolean lightSource;
+
+	@Element( parser = ElemType.DOOR)
+	public boolean door;
+	
+	@Element( parser = ElemType.SENSOR_INPUT)
+	public boolean sensorInput;
+	
+	@Element( parser = ElemType.DEPRECATED)
+	public boolean deprecated;
+	
+	public long dynamicPrice = -1;
+	
+	@Element( parser = ElemType.RESOURCE_INJECTION)
+	public ResourceInjectionType resourceInjection = ResourceInjectionType.OFF;
+	
+	@Element(from = 0, to = 100000,  parser = ElemType.EXPLOSION_ABSOBTION)
+	public float explosionAbsorbtion;
+	
+	@Element( vector4f = true, parser = ElemType.LIGHT_SOURCE_COLOR)
+	public final Vector4f lightSourceColor = new Vector4f(1, 1, 1, 1);
+	
+	@Element( editable = true, canBulkChange = true, parser = ElemType.EXTENDED_TEXTURE_4x4)
+	public boolean extendedTexture;
+	
+	@Element( editable = true, canBulkChange = true, parser = ElemType.ONLY_DRAW_IN_BUILD_MODE)
 	public boolean drawOnlyInBuildMode;
 	
-	@Element(tag = "LodShape", editable = true, canBulkChange = true)
+	@Element( editable = true, canBulkChange = true, parser = ElemType.LOD_SHAPE)
 	public String lodShapeString = "";
 	
-	@Element(tag = "LodShapeFromFar", states = {"0", "1", "2"}, stateDescs = {"solid block", "sprite", "invisible"})
+	@Element( states = {"0", "1", "2"}, stateDescs = {"solid block", "sprite", "invisible"}, parser = ElemType.LOD_SHAPE_FROM_FAR)
 	public int lodShapeStyle = 0;
 
 	
-	@Element(tag = "LowHpSetting", editable = true, canBulkChange = true)
+	@Element( editable = true, canBulkChange = true, parser = ElemType.LOW_HP_SETTING)
 	public boolean lowHpSetting;
 	
-	private float armourPercent;
-	private boolean solidBlockStyle;
-	private boolean blendedBlockStyle;
+	@Element(from = 1, to = 127,  editable = false, parser = ElemType.OLD_HITPOINTS)
+	public short oldHitpoints;
+	
+	
+	
+	
+	//wilcard index assigned after initialization
+	public int wildcardIndex;
+	
+	
 	private FixedRecipe productionRecipe;
-	private float maxHitpointsInverse;
+	private double maxHitpointsInverse;
+	private double maxHitpointsByteToFull;
+	private double maxHitpointsFullToByte;
 	private boolean createdTX = false;
 	private boolean signal;
 	public String idName;
 	private boolean specialBlock = true;
+	
+	private final List<FactoryResource> rawConsistence = new ObjectArrayList<FactoryResource>();
+	private final List<FactoryResource> totalConsistence = new ObjectArrayList<FactoryResource>();
+	private final ElementCountMap rawBlocks = new ElementCountMap();
 	
 	
 
@@ -219,7 +377,16 @@ public class ElementInformation implements Comparable<ElementInformation> {
 		signal = calcIsSignal(id);
 		assert (v.getBlockStyle() == this.getBlockStyle());
 	}
-
+	public enum ResourceInjectionType{
+		OFF(0),
+		ORE(1),
+		FLORA(17);
+		
+		public final int index;
+		private ResourceInjectionType(int index){
+			this.index = index;
+		}
+	}
 	public ElementInformation(short id, String name, ElementCategory class1, short[] textureId) {
 		this.name = name;
 		this.type = class1;
@@ -227,7 +394,6 @@ public class ElementInformation implements Comparable<ElementInformation> {
 		this.setTextureId(textureId);
 		signal = calcIsSignal(id);
 	}
-	
 	
 	public static byte defaultActive(short type) {
 		return (byte) (
@@ -258,6 +424,7 @@ public class ElementInformation implements Comparable<ElementInformation> {
 				id == ElementKeyMap.SIGNAL_NOT_BLOCK_ID ||
 				id == ElementKeyMap.SIGNAL_TRIGGER_STEPON ||
 				id == ElementKeyMap.SIGNAL_DELAY_NON_REPEATING_ID ||
+				id == ElementKeyMap.SIGNAL_RANDOM ||
 				id == ElementKeyMap.LOGIC_BUTTON ||
 				id == ElementKeyMap.LOGIC_FLIP_FLOP ||
 				id == ElementKeyMap.LOGIC_WIRELESS ||
@@ -271,7 +438,6 @@ public class ElementInformation implements Comparable<ElementInformation> {
 	}
 
 
-
 	public static boolean isBlendedSpecial(short type, boolean act) {
 		return ElementKeyMap.isDoor(type) && !act;
 	}
@@ -282,33 +448,64 @@ public class ElementInformation implements Comparable<ElementInformation> {
 	}
 
 	public static byte activateOnPlacement(short type) {
-		return type > 0 && ElementKeyMap.getInfo(type).activateOnPlacement() ? (byte) 1 : (byte) 0;
+		return (type > 0 && ElementKeyMap.getInfo(type).activateOnPlacement()) ? (byte) 1 : (byte) 0;
+	}
+	public static boolean canBeControlledByAny(short toType) {
+		if (!ElementKeyMap.isValidType(toType)) {
+			return false;
+		}
+		return ElementKeyMap.getInfoFast(toType).getControlledBy().size() > 0 || 
+				(toType == ElementKeyMap.SHIPYARD_CORE_POSITION) ||
+				(toType == ElementKeyMap.CARGO_SPACE) ||
+				(toType == ElementKeyMap.REACTOR_STABILIZER_STREAM_NODE) ||
+				(ElementKeyMap.getInfoFast(toType).isLightSource()) ||
+				(ElementKeyMap.getInfoFast(toType).isInventory()) ||
+				(ElementKeyMap.getInfoFast(toType).isInventory()) ||
+				(ElementKeyMap.getInfoFast(toType).isInventory()) ||
+				(ElementKeyMap.getInfoFast(toType).isSensorInput()) ||
+				(toType == ElementKeyMap.ACTIVAION_BLOCK_ID) ||
+				(toType == ElementKeyMap.SIGNAL_AND_BLOCK_ID) ||
+				(toType == ElementKeyMap.SIGNAL_OR_BLOCK_ID) ||
+				(toType == ElementKeyMap.ACTIVAION_BLOCK_ID) ||
+				(ElementKeyMap.getInfoFast(toType).isSignal()) ||
+				(toType == ElementKeyMap.ACTIVATION_GATE_CONTROLLER) ||
+				(toType == ElementKeyMap.STASH_ELEMENT) ||
+				(toType == ElementKeyMap.STASH_ELEMENT) ||
+				(ElementKeyMap.getInfo(toType).isRailTrack()) ||
+				(toType == ElementKeyMap.ACTIVAION_BLOCK_ID) ||
+				
+				(ElementKeyMap.getInfo(toType).isSignal()) ||
+				(ElementKeyMap.getInfo(toType).isSignal()) ||
+
+				(ElementKeyMap.getInfoFast(toType).isSignal()) ||
+				
+				(toType == ElementKeyMap.RAIL_BLOCK_DOCKER) ||
+				(ElementKeyMap.getInfoFast(toType).canActivate()) ||
+				(ElementKeyMap.getInfoFast(toType).isRailTrack()) ||
+				isLightConnectAny(toType) ||
+				(ElementKeyMap.getInfoFast(toType).isMainCombinationControllerB()) ||
+				(ElementKeyMap.getInfoFast(toType).isMainCombinationControllerB())
+				; 
 	}
 
-	/**
-	 * only use for assertion. control is saved in the dynamic structures
-	 * @param fromType
-	 * @param toType
-	 * @return
-	 */
 	public static boolean canBeControlled(short fromType, short toType) {
 		if (!ElementKeyMap.isValidType(toType) || !ElementKeyMap.isValidType(fromType)) {
 			return false;
 		}
 		return (fromType == ElementKeyMap.SHIPYARD_COMPUTER && toType == ElementKeyMap.SHIPYARD_CORE_POSITION) ||
-				(fromType == ElementKeyMap.SHIPYARD_COMPUTER && toType == ElementKeyMap.STASH_ELEMENT) ||
-				(fromType == ElementKeyMap.SHOP_BLOCK_ID && toType == ElementKeyMap.STASH_ELEMENT) ||
-				(fromType == ElementKeyMap.STASH_ELEMENT && toType == ElementKeyMap.SHOP_BLOCK_ID) ||
 				(fromType == ElementKeyMap.SHOP_BLOCK_ID && toType == ElementKeyMap.CARGO_SPACE) ||
-				(fromType == ElementKeyMap.STASH_ELEMENT && toType == ElementKeyMap.SHIPYARD_COMPUTER) ||
-				(fromType == ElementKeyMap.STASH_ELEMENT && toType == ElementKeyMap.STASH_ELEMENT) ||
+				(fromType == ElementKeyMap.REACTOR_STABILIZER_STREAM_NODE && toType == ElementKeyMap.REACTOR_STABILIZER_STREAM_NODE) ||
+				(fromType == ElementKeyMap.CORE_ID && ElementKeyMap.getInfoFast(toType).isLightSource()) ||
+				(ElementKeyMap.isToStashConnectable(fromType) && ElementKeyMap.getInfoFast(toType).isInventory()) ||
+				(ElementKeyMap.getInfoFast(fromType).isInventory() && ElementKeyMap.getInfoFast(toType).isInventory()) ||
+				(ElementKeyMap.getInfoFast(fromType).isRailTrack() && ElementKeyMap.getInfoFast(toType).isInventory()) ||
+				(fromType == ElementKeyMap.SIGNAL_SENSOR && ElementKeyMap.getInfoFast(toType).isSensorInput()) ||
 				(fromType == ElementKeyMap.STASH_ELEMENT && toType == ElementKeyMap.ACTIVAION_BLOCK_ID) ||
 				(fromType == ElementKeyMap.STASH_ELEMENT && toType == ElementKeyMap.SIGNAL_AND_BLOCK_ID) ||
 				(fromType == ElementKeyMap.STASH_ELEMENT && toType == ElementKeyMap.SIGNAL_OR_BLOCK_ID) ||
 				(ElementKeyMap.getInfo(fromType).isRailRotator() && toType == ElementKeyMap.ACTIVAION_BLOCK_ID) ||
 				(fromType == ElementKeyMap.ACTIVATION_GATE_CONTROLLER && ElementKeyMap.getInfoFast(toType).isSignal()) ||
 				(ElementKeyMap.getInfoFast(fromType).isSignal() && toType == ElementKeyMap.ACTIVATION_GATE_CONTROLLER) ||
-				(fromType == ElementKeyMap.STASH_ELEMENT && ElementKeyMap.getFactorykeyset().contains(toType)) ||
 				(fromType == ElementKeyMap.SALVAGE_CONTROLLER_ID && toType == ElementKeyMap.STASH_ELEMENT) ||
 				(ElementKeyMap.getFactorykeyset().contains(fromType) && toType == ElementKeyMap.STASH_ELEMENT) ||
 				(fromType == ElementKeyMap.RAIL_RAIL_SPEED_CONTROLLER && ElementKeyMap.getInfo(toType).isRailTrack()) ||
@@ -316,14 +513,20 @@ public class ElementInformation implements Comparable<ElementInformation> {
 				
 				(fromType == ElementKeyMap.SIGNAL_TRIGGER_AREA_CONTROLLER && ElementKeyMap.getInfo(toType).isSignal()) ||
 				(fromType == ElementKeyMap.ACTIVATION_GATE_CONTROLLER && ElementKeyMap.getInfo(toType).isSignal()) ||
+
+				(ElementKeyMap.getInfoFast(fromType).isRailDockable() && ElementKeyMap.getInfoFast(toType).isSignal()) ||
 				
-				(ElementKeyMap.getInfo(fromType).isSignal() && toType == ElementKeyMap.RAIL_BLOCK_DOCKER) ||
-				(ElementKeyMap.getInfo(fromType).isSignal() && ElementKeyMap.getInfo(toType).canActivate()) ||
-				(ElementKeyMap.getInfo(fromType).isSignal() && ElementKeyMap.getInfo(toType).isRailTrack()) ||
-				ElementKeyMap.getInfo(fromType).isLightConnect(toType) ||
-				(ElementKeyMap.getInfo(fromType).isMainCombinationControllerB() && ElementKeyMap.getInfo(toType).isMainCombinationControllerB()) ||
-				(ElementKeyMap.getInfo(fromType).isSupportCombinationControllerB() && ElementKeyMap.getInfo(toType).isMainCombinationControllerB())
+				(ElementKeyMap.getInfoFast(fromType).isSignal() && toType == ElementKeyMap.RAIL_BLOCK_DOCKER) ||
+				(ElementKeyMap.getInfoFast(fromType).isSignal() && ElementKeyMap.getInfoFast(toType).canActivate()) ||
+				(ElementKeyMap.getInfoFast(fromType).isSignal() && ElementKeyMap.getInfoFast(toType).isRailTrack()) ||
+				ElementKeyMap.getInfoFast(fromType).isLightConnect(toType) ||
+				(ElementKeyMap.getInfoFast(fromType).isMainCombinationControllerB() && ElementKeyMap.getInfoFast(toType).isMainCombinationControllerB()) ||
+				(ElementKeyMap.getInfoFast(fromType).isSupportCombinationControllerB() && ElementKeyMap.getInfoFast(toType).isMainCombinationControllerB())
 				; 
+	}
+
+	private boolean isSensorInput() {
+		return isInventory() || isDoor() || sensorInput;
 	}
 
 	private static CharSequence getFactoryResourceString(ElementInformation info) {
@@ -354,8 +557,11 @@ public class ElementInformation implements Comparable<ElementInformation> {
 	}
 
 	public static boolean allowsMultiConnect(short controlledType) {
+//		assert(controlledType != ElementKeyMap.CARGO_SPACE || !ElementKeyMap.getInfo(controlledType).isMultiControlled());
 		return
-				ElementKeyMap.isValidType(controlledType) && ElementKeyMap.getInfo(controlledType).isMultiControlled();
+				ElementKeyMap.isValidType(controlledType) && 
+				ElementKeyMap.getInfoFast(controlledType).isMultiControlled() &&
+				!ElementKeyMap.getInfoFast(controlledType).isRestrictedMultiControlled();
 	}
 
 	public static boolean isMedical(short bId) {
@@ -363,159 +569,29 @@ public class ElementInformation implements Comparable<ElementInformation> {
 	}
 
 	public boolean isProducedIn(short factoryId) {
-		return
+		return !deprecated && (
 				(factoryId == ElementKeyMap.FACTORY_CAPSULE_ASSEMBLER_ID && producedInFactory == FAC_CAPSULE) ||
 						(factoryId == ElementKeyMap.FACTORY_MICRO_ASSEMBLER_ID && producedInFactory == FAC_MICRO) ||
 						(factoryId == ElementKeyMap.FACTORY_BASIC_ID && producedInFactory == FAC_BASIC) ||
 						(factoryId == ElementKeyMap.FACTORY_STANDARD_ID && producedInFactory == FAC_STANDARD) ||
-						(factoryId == ElementKeyMap.FACTORY_ADVANCED_ID && producedInFactory == FAC_ADVANCED);
+						(factoryId == ElementKeyMap.FACTORY_ADVANCED_ID && producedInFactory == FAC_ADVANCED));
 	}
-	public short getProducedIn() {
-		
+	public short getProducedInFactoryType(){
 		switch(producedInFactory){
-		case FAC_CAPSULE: return ElementKeyMap.FACTORY_CAPSULE_ASSEMBLER_ID;
-		case FAC_MICRO: return ElementKeyMap.FACTORY_MICRO_ASSEMBLER_ID;
-		case FAC_BASIC: return ElementKeyMap.FACTORY_BASIC_ID;
-		case FAC_STANDARD: return ElementKeyMap.FACTORY_STANDARD_ID;
-		case FAC_ADVANCED: return ElementKeyMap.FACTORY_ADVANCED_ID;
-		default: return 0;
-		}
+			case(FAC_CAPSULE): return ElementKeyMap.FACTORY_CAPSULE_ASSEMBLER_ID;
+			case(FAC_MICRO): return ElementKeyMap.FACTORY_MICRO_ASSEMBLER_ID;
+			case(FAC_BASIC): return ElementKeyMap.FACTORY_BASIC_ID;
+			case(FAC_STANDARD): return ElementKeyMap.FACTORY_STANDARD_ID;
+			case(FAC_ADVANCED): return ElementKeyMap.FACTORY_ADVANCED_ID;
 		
-	}
-
-	private String getDivString(float c) {
-
-		for (float i = 0; i < 8; i++) {
-			if (i * 0.125f == c) {
-				return (int) i + "/8";
-			}
+			default: return 0;
 		}
-		if (c - Math.round(c) == 0) {
-			return String.valueOf(c);
-		}
-		return StringTools.formatPointZeroZero(c);
 	}
-
 
 	
-
 	
-
-	private void addGraph(Int2IntOpenHashMap map, int col, int localrow, int w, int h, mxGraph graph, Object v1, Object parent, float count, float currentMult) {
-
-		int r = map.get(col);
-		String cS;
-		String totCS;
-
-		cS = getDivString(count);
-		totCS = getDivString(currentMult);
-
-		String label = getName() + "\n(x" + cS + ")\ntot(x" + totCS + ")";
-		Object v2 = graph.insertVertex(parent, null, label, col * (w * 2 + 10), r * (h + 10), w, h);
-
-		Object e1 = graph
-				.insertEdge(
-						parent,
-						null,
-						"",
-						v2,
-						v1);
-
-		map.put(col, r + 1);
-
-		int j = 0;
-		if (isCapsule()) {
-			System.err.println("CAPSULE " + this + "; Consistence " + consistence);
-			if (consistence.size() > 0) {
-				FactoryResource factoryResource = consistence.get(0);
-				ElementInformation from = ElementKeyMap.getInfo(factoryResource.type);
-				System.err.println("CAPSULE " + this + "; Consistence " + consistence + " split-> " + from.cubatomConsistence);
-				for (FactoryResource c : from.cubatomConsistence) {
-					if (c.type == getId()) {
-						System.err.println("ADDING CUBATOM CONSISTENS FOR " + this + " -> " + ElementKeyMap.getInfo(c.type));
-						from.addGraph(map, col + 1, j, w, h, graph, v2, parent, 1f / c.count, (1f / c.count) * currentMult);
-					}
-				}
-			}
-		} else {
-			for (FactoryResource c : consistence) {
-				System.err.println("ADD CONSISTENCE NORMAL " + c);
-				ElementKeyMap.getInfo(c.type).addGraph(map, col + 1, j, w, h, graph, v2, parent, c.count, c.count * currentMult);
-				j++;
-			}
-		}
-	}
-
-	public JPanel getGraph() {
-		JPanel p = new JPanel(new GridBagLayout());
-		mxGraph graph = new mxGraph();
-		Object parent = graph.getDefaultParent();
-		graph.setCellsEditable(false);
-		graph.setConnectableEdges(false);
-		graph.getModel().beginUpdate();
-		int startX = 20;
-		int w = 100;
-		int h = 60;
-		int col = 0;
-		try {
-			Object v1 = graph.insertVertex(parent, String.valueOf(getId()), getName(), startX, 20, w, h);
-			int i = 0;
-
-			Int2IntOpenHashMap map = new Int2IntOpenHashMap();
-			if (isCapsule()) {
-				System.err.println("CAPSULE " + this + "; Consistence " + consistence);
-				if (consistence.size() > 0) {
-					FactoryResource factoryResource = consistence.get(0);
-					ElementInformation from = ElementKeyMap.getInfo(factoryResource.type);
-					System.err.println("CAPSULE " + this + "; Consistence " + consistence + " split-> " + from.cubatomConsistence);
-					for (FactoryResource c : from.cubatomConsistence) {
-						if (c.type == getId()) {
-							System.err.println("ADDING CUBATOM CONSISTENS FOR " + this + " -> " + ElementKeyMap.getInfo(c.type));
-							from.addGraph(map, col + 1, i, w, h, graph, v1, parent, 1f / c.count, 1f / (c.count));
-						}
-					}
-				}
-			} else {
-				for (FactoryResource c : consistence) {
-
-					ElementKeyMap.getInfo(c.type).addGraph(map, col + 1, i, w, h, graph, v1, parent, c.count, c.count);
-					map.put(0, 1);
-					i++;
-				}
-			}
-
-		} finally {
-			graph.getModel().endUpdate();
-		}
-
-		mxGraphComponent graphComponent = new mxGraphComponent(graph);
-		GridBagConstraints gbc_btnGraph = new GridBagConstraints();
-		gbc_btnGraph.anchor = GridBagConstraints.NORTHEAST;
-		gbc_btnGraph.gridx = 0;
-		gbc_btnGraph.gridy = 0;
-		gbc_btnGraph.weightx = 1;
-		gbc_btnGraph.weighty = 1;
-		gbc_btnGraph.fill = GridBagConstraints.BOTH;
-		p.add(graphComponent, gbc_btnGraph);
-
-		return p;
-	}
-
 	public long calculateDynamicPrice() {
-		if (dynamicPrice < 0) {
-			//			System.err.println("CALC DYN PRICE FOR "+name);
-			long price = 0;
-			if (!consistence.isEmpty()) {
-				for (FactoryResource c : consistence) {
-					//					System.err.println("CALC DYN PRICE FOR "+name+" adding: "+ElementKeyMap.getInfo(c.type).name);
-
-					price += c.count * ElementKeyMap.getInfo(c.type).calculateDynamicPrice();
-				}
-			} else {
-				price = this.price;
-			}
-			dynamicPrice = price;
-		}
+		
 		return dynamicPrice;
 	}
 
@@ -527,168 +603,7 @@ public class ElementInformation implements Comparable<ElementInformation> {
 		return blockResourceType == RT_ORE;
 	}
 
-	public void appendXML(Document doc, org.w3c.dom.Element parent) throws CannotAppendXMLException {
-		String tagName = "Block";//getName().replaceAll("[^a-zA-Z]+", "");
-
-		org.w3c.dom.Element child = doc.createElement(tagName);
-
-		//		<Gravity type='GRAVITY_ID' icon='0' textureId='192' name='Gravity Unit'>
-
-		String key = getKeyId(getId());
-
-		if (key == null) {
-			throw new CannotAppendXMLException("Cannot find property key for Block ID " + getId() + "; Check your Block properties file");
-		}
-		child.setAttribute("type", key);
-		child.setAttribute("icon", String.valueOf(getBuildIconNum()));
-
-		child.setAttribute("textureId", String.valueOf(StringTools.getCommaSeperated(getTextureIds())));
-		child.setAttribute("name", name);
-
-		Field[] fields = ElementInformation.class.getFields();
-		for (Field f : fields) {
-			try {
-				f.setAccessible(true);
-				if (f.get(this) == null) {
-					continue;
-				}
-			} catch (IllegalArgumentException e) {
-				e.printStackTrace();
-				throw new CannotAppendXMLException(e.getMessage());
-			} catch (IllegalAccessException e) {
-				e.printStackTrace();
-				throw new CannotAppendXMLException(e.getMessage());
-			}
-
-			Element annotation = f.getAnnotation(Element.class);
-
-			if (annotation != null && annotation.writeAsTag()) {
-
-				org.w3c.dom.Element node = doc.createElement(annotation.tag());
-				try {
-					if (annotation.factory()) {
-						if (getFactory().input == null) {
-							node.setTextContent("INPUT");
-						} else {
-
-							for (int pid = 0; pid < getFactory().input.length; pid++) {
-								org.w3c.dom.Element prodNode = doc.createElement("Product");
-
-								org.w3c.dom.Element inputNode = doc.createElement("Input");
-								org.w3c.dom.Element outputNode = doc.createElement("Output");
-
-								for (int i = 0; i < getFactory().input[pid].length; i++) {
-									FactoryResource factoryResource = getFactory().input[pid][i];
-
-									inputNode.appendChild(factoryResource.getNode(doc));
-								}
-
-								for (int i = 0; i < getFactory().output[pid].length; i++) {
-									FactoryResource factoryResource = getFactory().output[pid][i];
-
-									outputNode.appendChild(factoryResource.getNode(doc));
-								}
-
-								prodNode.appendChild(inputNode);
-								prodNode.appendChild(outputNode);
-								node.appendChild(prodNode);
-							}
-
-						}
-
-					} else if (annotation.type()) {
-						short string = f.getShort(this);
-						node.setTextContent(String.valueOf(string));
-					} else if (annotation.cubatom()) {
-
-					} else if (annotation.consistence()) {
-						for (int j = 0; j < getConsistence().size(); j++) {
-
-							FactoryResource factoryResource = getConsistence().get(j);
-							node.appendChild(factoryResource.getNode(doc));
-
-						}
-					} else if (annotation.cubatomConsistence()) {
-						for (int j = 0; j < cubatomConsistence.size(); j++) {
-							FactoryResource factoryResource = cubatomConsistence.get(j);
-							node.appendChild(factoryResource.getNode(doc));
-
-						}
-					} else if (annotation.vector3f()) {
-						Vector3f v = (Vector3f) f.get(this);
-
-						node.setTextContent(v.x + "," + v.y + "," + v.z);
-
-					} else if (annotation.vector4f()) {
-						Vector4f v = (Vector4f) f.get(this);
-
-						node.setTextContent(v.x + "," + v.y + "," + v.z + "," + v.w);
-
-					} else if (f.getType().equals(short[].class)) {
-						short[] v = (short[]) f.get(this);
-						StringBuffer d = new StringBuffer();
-						for(int i = 0; i < v.length; i++){
-							d.append(v[i]);
-							if(i < v.length - 1){
-								d.append(", ");
-							}
-						}
-						node.setTextContent(d.toString());
-
-					} else if (f.getType().equals(int[].class)) {
-						int[] v = (int[]) f.get(this);
-						StringBuffer d = new StringBuffer();
-						for(int i = 0; i < v.length; i++){
-							d.append(v[i]);
-							if(i < v.length - 1){
-								d.append(", ");
-							}
-						}
-						node.setTextContent(d.toString());
-
-					} else if (annotation.collectionType().equals("blockTypes")) {
-						@SuppressWarnings("unchecked")
-						Collection<Short> set = (Collection<Short>) f.get(this);
-						if (set.isEmpty()) {
-							continue;
-						}
-						for (Short s : set) {
-							//							if(ElementKeyMap.getFactorykeyset().contains(getId()) && ElementKeyMap.getFactorykeyset().contains(s)){
-							//								continue;
-							//								//DO NOT WRITE FACTORIES. they are added automatically
-							//							}
-							org.w3c.dom.Element item = doc.createElement(annotation.collectionElementTag());
-							String keyId = getKeyId(s);
-							if (keyId == null) {
-								throw new CannotAppendXMLException("[BlockSet] " + f.getName() + " Cannot find property key for Block ID " + s + "; Check your Block properties file");
-							}
-							item.setTextContent(keyId);
-							node.appendChild(item);
-						}
-
-					} else {
-						String string = f.get(this).toString();
-
-						if (annotation.textArea()) {
-							string = string.replace("\n", "\\n\\r");
-						}
-						if (string.length() == 0) {
-							continue;
-						}
-						node.setTextContent(string);
-
-					}
-				} catch (Exception e1) {
-					e1.printStackTrace();
-					throw new CannotAppendXMLException(e1.getMessage());
-				}
-
-				child.appendChild(node);
-			}
-		}
-
-		parent.appendChild(child);
-	}
+	
 
 	public short[] getTextureIds() {
 		return textureId;
@@ -703,42 +618,22 @@ public class ElementInformation implements Comparable<ElementInformation> {
 		return name.compareTo(o.name);
 	}
 
-	/**
-	 * @return the amour
-	 */
-	public float getAmour() {
-		return amour;
-	}
-
-	/**
-	 * @param amour the amour to set
-	 */
-	public void setAmour(float amour) {
-		this.amour = amour;
-		this.armourPercent = amour / 100f;
-	}
-
-	/**
-	 * @return the armourPercent
-	 */
-	public float getArmourPercent() {
-		return armourPercent;
-	}
 
 	/**
 	 * @return the blockStyle
 	 */
-	public int getBlockStyle() {
+	public BlockStyle getBlockStyle() {
 		return blockStyle;
 	}
 
 	/**
 	 * @param blockStyle the blockStyle to set
+	 * @throws ParseException 
 	 */
-	public void setBlockStyle(int blockStyle) {
-		this.blockStyle = blockStyle;
-		solidBlockStyle = blockStyle > 0 && blockStyle != 3 && blockStyle != 6;
-		blendedBlockStyle = blockStyle == 3 ;
+	public void setBlockStyle(int blockStyle) throws ElementParserException {
+		this.blockStyle = BlockStyle.getById(blockStyle);
+//		solidBlockStyle = blockStyle > 0 && blockStyle != 3 && blockStyle != 6;
+//		blendedBlockStyle = blockStyle == 3 ;
 	}
 
 	/**
@@ -763,7 +658,6 @@ public class ElementInformation implements Comparable<ElementInformation> {
 		return controlling;
 	}
 
-	
 
 
 	/**
@@ -836,18 +730,11 @@ public class ElementInformation implements Comparable<ElementInformation> {
 	/**
 	 * @return the maxHitPoints
 	 */
-	public short getMaxHitPoints() {
-		return maxHitPoints;
+	public int getMaxHitPointsFull() {
+		return maxHitPointsFull;
 	}
 
-	/**
-	 * @param maxHitPoints the maxHitPoints to set
-	 */
-	public void setMaxHitPoints(short maxHitPoints) {
-		assert (maxHitPoints > 0 && maxHitPoints < 256) : maxHitPoints;
-		this.maxHitPoints = maxHitPoints;
-		this.maxHitpointsInverse = (1f / maxHitPoints);
-	}
+
 
 	/**
 	 * @return the name
@@ -859,7 +746,9 @@ public class ElementInformation implements Comparable<ElementInformation> {
 		}
 		return name;
 	}
-
+	public String getNameUntranslated() {
+		return name;
+	}
 	/**
 	 * @return the price
 	 */
@@ -1026,7 +915,8 @@ public class ElementInformation implements Comparable<ElementInformation> {
 	 * @return the shoppable
 	 */
 	public boolean isShoppable() {
-		return shoppable;
+		return shoppable 
+				;
 	}
 
 	/**
@@ -1051,20 +941,30 @@ public class ElementInformation implements Comparable<ElementInformation> {
 		this.price = price;
 	}
 
-	public boolean isSolidBlockStyle() {
-		return solidBlockStyle;
+
+	public int getDefaultOrientation() {
+		
+//		if (getId() == ElementKeyMap.CARGO_SPACE) {
+			return 0;
+//		}
+//		if (getId() == ElementKeyMap.TRANSPORTER_MODULE) {
+//			return org.schema.game.common.data.element.Element.TOP;
+//		}
+//		if (getBlockStyle() == BlockStyle.SPRITE || getIndividualSides() == 3) {
+//			return org.schema.game.common.data.element.Element.TOP;
+//		}
+//		
+//		if (getBlockStyle() == BlockStyle.NORMAL24) {
+//			return 14; //top front
+//		}
+//		return getId() == ElementKeyMap.GRAVITY_ID ? org.schema.game.common.data.element.Element.BOTTOM : org.schema.game.common.data.element.Element.FRONT;
 	}
 
-	
 
 
-
-	public boolean usesActiveBitForExtraOrientation() {
-		return getBlockStyle() == 2; //corner piece
-	}
 
 	public boolean isBlendBlockStyle() {
-		return blendedBlockStyle || (hasLod() && lodShapeStyle == 1);
+		return getBlockStyle().blendedBlockStyle || (hasLod() && lodShapeStyle == 1);
 	}
 
 	public boolean controlsAll() {
@@ -1161,6 +1061,15 @@ public class ElementInformation implements Comparable<ElementInformation> {
 		return isCombiConnectSupport(to) || isCombiConnectEffect(to) || isLightConnect(to);
 	}
 
+	public static boolean isLightConnectAny(short to) {
+		if (ElementKeyMap.isValidType(to)) {
+			ElementInformation info = ElementKeyMap.getInfo(to);
+			if (info.isLightSource()) {
+				return true;
+			}
+		}
+		return false;
+	}
 	public boolean isLightConnect(short to) {
 		if (ElementKeyMap.isValidType(to)) {
 			ElementInformation info = ElementKeyMap.getInfo(to);
@@ -1172,62 +1081,42 @@ public class ElementInformation implements Comparable<ElementInformation> {
 	}
 
 	public boolean activateOnPlacement() {
-		if (isSignal()) {
-			return false;
-		}
-		if (ElementKeyMap.getFactorykeyset().contains(id) || isLightSource() || getBlockStyle() > 0 || isDoor() || getId() == ElementKeyMap.STASH_ELEMENT) {
-			return true;
-		}
-		return false;
+		return !isSignal() && (ElementKeyMap.getFactorykeyset().contains(id) || isLightSource() || isDoor() || 
+				getId() == ElementKeyMap.STASH_ELEMENT || getId() == ElementKeyMap.PICKUP_AREA);
 	}
 
 	public String[] parseDescription() {
 		String d = getDescription();
 
-		String[] split = d.split("\\n");
-		boolean del = false;
-		for (int i = 0; i < split.length; i++) {
-			
-			split[i] = split[i].replace("$ACTIVATE", /*KeyboardMappings.ACTIVATE.getKeyChar()*/ "R");
+		d = String.format("Block-Armor: ") + "<?>" + " \n\n" + d;
+		d = String.format("Block-HP: ") + getMaxHitPointsFull() + " \n" + d;
+		String ahp = String.format("Armor-HP  for Structure: ");
+		d = String.format("System-HP for Structure: ") + structureHP + " \n" + d;
+		d = String.format("Mass: ") + getMass() + " \n" + d;
 
-			
-			if (del || split[i].contains("Structural Stats") || split[i].contains("StructuralStats")) {
-				if(!del){
-					split[i] = split[i].substring(0, split[i].indexOf("Structural")-1);
-				}else{
-					split[i] = "";
-				}
-				del = true;
-			}
-			
+		String[] split = d.split("\\n");
+		for (int i = 0; i < split.length; i++) {
+			split[i] = split[i].replace("$ACTIVATE", "Activate Key");
+
 			if (split[i].contains("$RESOURCES")) {
 				split[i] = split[i].replace("$RESOURCES", getFactoryResourceString(this));
 			}
 			if (split[i].contains("$ARMOUR")) {
-				split[i] = split[i].replace("$ARMOUR", String.valueOf(getAmour()));
+				split[i] = split[i].replace("$ARMOUR", ""/*String.valueOf(getArmor())*/);
 			}
 			if (split[i].contains("$HP")) {
-				split[i] = split[i].replace("$HP", String.valueOf(getMaxHitPoints()));
+				split[i] = split[i].replace("$HP", String.valueOf(getMaxHitPointsFull()));
 			}
 
 			if (split[i].contains("$EFFECT")) {
-				split[i] = split[i].replace("$EFFECT", "");
-//				ShipManagerContainer c = new ShipManagerContainer(new Ship(state));
-//				EffectElementManager<?, ?, ?> effect = c.getEffect(getId());
-//				if (effect != null) {
-//					split[i] = split[i].replace("$EFFECT",
-//							Lng.str("You can use this system to upgrade your weapons or to use defensively on your ship.\n\nTo link your Controller to its Modules, press %s on the Controller, then %s on the individual modules, \nor alternatively Shift + $CONNECT_MODULE to mass select grouped modules.\n\nAfterwards you can link it to a weapon by connecting the weapon controller you want to upgrade\nwith the effect controller you just made.\nYou can do this manually with $SELECT_MODULE and $CONNECT_MODULE or in the Weapons Menu.\n\n\nEffect:\n%s\n\nNote that for the full effect, \nyou need to connect 1:1 in size. \nThe amount of linked modules of your effect has to be the same amount of your weapon.\n\nIf not used linked to a weapon, \nthe system has a defensive effect you can enable\nPlace the computer on your hotbar in the Weapons Menu\nand activate it:\n\n",  KeyboardMappings.SELECT_MODULE.getKeyChar(),  KeyboardMappings.CONNECT_MODULE.getKeyChar(),  effect.getCombiDescription()) +
-//									effect.getDefensiveEffectType().getShopDescription());
-//				} else {
-//					split[i] = split[i].replace("$EFFECT", "NO_EFFECT(invalid $ var)");
-//				}
+				split[i] = split[i].replace("$EFFECT", "NO_EFFECT(not parsed)");
 			}
 			if (split[i].contains("$MAINCOMBI")) {
 
 				split[i] = split[i].replace("$MAINCOMBI",
 						String.format("This controller can be connected to other weapons\nand systems (cannon, beam, damage pulse, missile)\nto customize your weapon.\n\nTo link your Controller to its Modules, press %s on the Controller, then %s on the individual modules, \nor alternatively Shift + $CONNECT_MODULE to mass select grouped modules.\n\nAfterwards you can link it to another weapon by connecting the weapon controller you want to upgrade\nwith the weapon controller you just made.\nYou can do this manually with $SELECT_MODULE and $CONNECT_MODULE or in the Weapons Menu.\n\nNote that for the full effect, \nyou need to connect 1:1 in size.\n\n", 
-								/*KeyboardMappings.SELECT_MODULE.getKeyChar()*/"C", 
-								/*KeyboardMappings.CONNECT_MODULE.getKeyChar()*/"X")
+								"Select Button", 
+								"Connect Button")
 				);
 
 			}
@@ -1249,7 +1138,7 @@ public class ElementInformation implements Comparable<ElementInformation> {
 	/**
 	 * @return the consistence
 	 */
-	public ArrayList<FactoryResource> getConsistence() {
+	public List<FactoryResource> getConsistence() {
 		return consistence;
 	}
 
@@ -1300,8 +1189,14 @@ public class ElementInformation implements Comparable<ElementInformation> {
 	/**
 	 * @return the maxHitpointsInverse
 	 */
-	public float getMaxHitpointsInverse() {
+	public double getMaxHitpointsFullInverse() {
 		return maxHitpointsInverse;
+	}
+	public double getMaxHitpointsByteToFull() {
+		return maxHitpointsByteToFull;
+	}
+	public double getMaxHitpointsFullToByte() {
+		return maxHitpointsFullToByte;
 	}
 
 	/**
@@ -1349,9 +1244,26 @@ public class ElementInformation implements Comparable<ElementInformation> {
 	public boolean isMultiControlled() {
 		return
 				isSignal() ||
-						getId() == ElementKeyMap.STASH_ELEMENT ||
+						isInventory() ||
 						isRailTrack() ||
-						ElementKeyMap.getFactorykeyset().contains(getId());
+						isSensorInput() ||
+						getId() == ElementKeyMap.TEXT_BOX;
+	}
+	public boolean isRestrictedMultiControlled() {
+		return getId() == ElementKeyMap.CARGO_SPACE;
+	}
+	/**
+	 * 
+	 * @return all types that can't have more than one connection to this
+	 *	e.g. a cago block should only ever be assigned to one inventory
+	 */
+	public ShortArrayList getRestrictedMultiControlled() {
+		if(getId() == ElementKeyMap.CARGO_SPACE){
+			return ElementKeyMap.inventoryTypes;
+		}else{
+			assert(false):this;
+			return null;
+		}
 	}
 
 	public String createWikiStub() {
@@ -1359,8 +1271,8 @@ public class ElementInformation implements Comparable<ElementInformation> {
 
 		s.append("{{infobox block" + "\n");
 		s.append("  |type=" + getName() + "\n");
-		s.append("	|hp=" + getMaxHitPoints() + "\n");
-		s.append("	|armor=" + (int) (getArmourPercent() * 100) + "%" + "\n");
+		s.append("	|hp=" + getMaxHitPointsFull() + "\n");
+		s.append("	|armor=" + "-" + "\n");
 		s.append("	|light=" + (isLightSource() ? "yes" : "no") + "\n");
 		if (isLightSource()) {
 			s.append("	|lightColor=" + getLightSourceColor() + "\n");
@@ -1368,65 +1280,11 @@ public class ElementInformation implements Comparable<ElementInformation> {
 		s.append("	|dv=" + getId() + "\n");
 		s.append("}}" + "\n\n");
 
+//		s.append("==Description=="+"\n");
+//		s.append(getFilledDescription()+"\n");
+//		s.append("-----\n");
 
 		return s.toString();
-	}
-
-	public String getFilledDescription() {
-		StringBuffer newB = new StringBuffer();
-		String[] split = getDescription().split("\\n");
-		for (int i = 0; i < split.length; i++) {
-			split[i] = split[i].replace("$ACTIVATE", "R"/*KeyboardMappings.ACTIVATE.getKeyChar()*/);
-
-			if (split[i].contains("$ARMOUR")) {
-				split[i] = split[i].replace("$ARMOUR", String.valueOf(getAmour()));
-			}
-			if (split[i].contains("$HP")) {
-				split[i] = split[i].replace("$HP", String.valueOf(getMaxHitPoints()));
-			}
-
-			if (split[i].contains("$EFFECT")) {
-				//				ShipManagerContainer c = new ShipManagerContainer(new Ship(getState()));
-				//				EffectElementManager<?, ?, ?> effect = c.getEffect(info.getId());
-				//				if(effect != null){
-				//					split[i] = split[i].replace("$EFFECT",
-				//							"You can use this system\n"
-				//									+ "to upgrade your weapons.\n"
-				//									+ "Place it like you would a normal weapon.\n"
-				//									+ "First the controller and then the module,\n"
-				//									+ "so the module is connected to the controller.\n"
-				//									+ "You can then select a weapon controller with "+KeyboardMappings.SELECT_MODULE.getKeyChar()+"\n"
-				//									+ "and then press "+KeyboardMappings.CONNECT_MODULE.getKeyChar()+" to hook\n"
-				//									+ "the effect up to the weapon\n\n"
-				//									+ "Effect:\n"+effect.getCombiDescription()+"\n\n"
-				//									+ "Note, that for the full effect, \nyou need to connect 1:1 in size.\n\n"
-				//									+ "If not used for a weapon, \n"
-				//									+ "the effect system has a defensive effect:\n\n"+
-				//									effect.getDefensiveEffectType().getShopDescription());
-				//				}else{
-				//					split[i] = split[i].replace("$EFFECT", "NO_EFFECT(invalid $ var)");
-				//				}
-			}
-
-			if (split[i].contains("$MAINCOMBI")) {
-
-				split[i] = split[i].replace("$MAINCOMBI",
-						"This controller can be connected to other weapons\n"
-								+ "and systems (cannon, beam, pulse, missile)\n"
-								+ "to customize your weapon\n\n"
-								+ "First the controller and then the module,\n"
-								+ "so the module is connected to the controller.\n"
-								+ "You can then select another weapon controller with C\n"
-								+ "and then press X to hook\n"
-								+ "this weapon up to the other weapon\n\n"
-								+ "Note, that for the full effect, \nyou need to connect 1:1 in size\n\n"
-				);
-
-			}
-			newB.append(split[i] + "\n");
-
-		}
-		return newB.toString();
 	}
 
 	public boolean isDoor() {
@@ -1464,11 +1322,11 @@ public class ElementInformation implements Comparable<ElementInformation> {
 	}
 
 	public boolean isNormalBlockStyle() {
-		return blockStyle == 0 || blockStyle == 6;
+		return blockStyle.cube;
 	}
 
 	public boolean isRailTrack() {
-		return blockStyle == 6 && !hasLod() && 
+		return blockStyle == BlockStyle.NORMAL24 && !hasLod() && 
 				id != ElementKeyMap.RAIL_BLOCK_DOCKER && 
 				id != ElementKeyMap.RAIL_BLOCK_TURRET_Y_AXIS && 
 				id != ElementKeyMap.SHIPYARD_CORE_POSITION && 
@@ -1574,7 +1432,7 @@ public class ElementInformation implements Comparable<ElementInformation> {
 	public boolean needsCoreConnectionToWorkOnHotbar() {
 
 		return id != ElementKeyMap.RAIL_BLOCK_DOCKER
-				&& id != ElementKeyMap.LOGIC_REMOTE_INNER;
+				&& id != ElementKeyMap.LOGIC_REMOTE_INNER && id != ElementKeyMap.POWER_BATTERY;
 	}
 
 	/**
@@ -1608,7 +1466,7 @@ public class ElementInformation implements Comparable<ElementInformation> {
 				id == ElementKeyMap.FACTORY_STANDARD_ID ||
 				id == ElementKeyMap.FACTORY_ADVANCED_ID ||
 				id == ElementKeyMap.SHOP_BLOCK_ID ||
-				ElementKeyMap.factoryInfoArray[id];
+				getFactory() != null;
 	}
 
 	public boolean isSpecialBlock() {
@@ -1634,7 +1492,6 @@ public class ElementInformation implements Comparable<ElementInformation> {
 		return id != ElementKeyMap.PICKUP_AREA && id != ElementKeyMap.EXIT_SHOOT_RAIL && id != ElementKeyMap.PICKUP_RAIL;
 	}
 
-	
 
 	public void onInit() {
 		calculateDynamicPrice();	
@@ -1646,8 +1503,284 @@ public class ElementInformation implements Comparable<ElementInformation> {
 		return lodShapeString.length() > 0;
 	}
 
-	
 
+	private void recalcRawConsistenceRec(FactoryResource cs, int count) {
+		ElementInformation info = ElementKeyMap.getInfoFast(cs.type);	
+		if(info.getConsistence().isEmpty()){
+			rawConsistence.add(cs);
+			rawBlocks.inc(cs.type, count);
+			//System.out.println("RAW CONSISTENCE: Base " + ElementKeyMap.getInfo(cs.type) + " " + count);
+		}else{
+			for(FactoryResource c : info.consistence){
+				recalcRawConsistenceRec(c, c.count * count);
+			}
+		}
+	}
+	private void recalcTotalConsistenceRec(FactoryResource cs) {
+		ElementInformation info = ElementKeyMap.getInfoFast(cs.type);
+		getTotalConsistence().add(cs);
+		for(FactoryResource c : info.consistence){
+			recalcTotalConsistenceRec(c);
+		}
+		
+	}
+	public void recalcTotalConsistence() {
+		rawBlocks.checkArraySize();
+		rawConsistence.clear();
+		getTotalConsistence().clear();
+		//System.out.println("RAW CONSISTENCE: " + this.name);
+		//Take source block for crafting consistence, probably temporary as consistence itself should already account for this
+		List<FactoryResource> sourceConsistence = consistence;
+		if(getSourceReference() != 0 && ElementKeyMap.isValidType(getSourceReference())){
+			sourceConsistence = ElementKeyMap.getInfo(getSourceReference()).getConsistence();
+		}
+		
+		for(FactoryResource c : sourceConsistence){
+			recalcRawConsistenceRec(c, c.count);
+		}
+		//System.out.println("RAW CONSISTENCE: ----------");
+		for(FactoryResource c : sourceConsistence){
+			recalcTotalConsistenceRec(c);
+		}
+	}
+
+	public ElementCountMap getRawBlocks() {
+		return rawBlocks;
+	}
+
+	public List<FactoryResource> getRawConsistence() {
+		return rawConsistence;
+	}
+
+	public List<FactoryResource> getTotalConsistence() {
+		return totalConsistence;
+	}
+
+	public boolean isExtendedTexture() {
+		return extendedTexture;
+	}
+
+	public boolean isReactorChamberAny() {
+		return isReactorChamberGeneral() || isReactorChamberSpecific();
+	}
+	public boolean isReactorChamberGeneral() {
+		return chamberGeneral;
+	}
+	public boolean isReactorChamberSpecific() {
+		return chamberRoot != 0;
+	}
+	public short getComputer(){
+		return (short) computerType;
+	}
+	public boolean needsComputer() {
+		return ElementKeyMap.isValidType(computerType);
+	}
+	public ShortSet getChamberChildrenOnLevel(ShortSet out) {
+		out.addAll(chamberChildren);
+		if(chamberParent != 0){
+			ElementInformation info = ElementKeyMap.getInfo(chamberParent);
+			if(info.chamberUpgradesTo == id){
+				info.getChamberChildrenOnLevel(out);
+				out.remove((short)info.chamberUpgradesTo);
+			}
+		}
+		return out;
+	}
+	public short getChamberUpgradedRoot() {
+		if(chamberParent != 0){
+			ElementInformation parent = ElementKeyMap.getInfo(chamberParent);
+			if(parent.chamberUpgradesTo == id){
+				return parent.getChamberUpgradedRoot();
+			}else{
+				return id;
+			}
+		}else{
+			return id;
+		}
+	}
+	public boolean isChamberChildrenUpgradableContains(short type) {
+		if(chamberChildren.contains(type)){
+			return true;
+		}
+		if(chamberParent != 0){
+			ElementInformation parent = ElementKeyMap.getInfo(chamberParent);
+			if(parent.chamberUpgradesTo == id){
+				if(parent.isChamberChildrenUpgradableContains(type)){
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+	public boolean isChamberUpgraded() {
+		return ElementKeyMap.isValidType(chamberParent) && ElementKeyMap.getInfo(chamberParent).chamberUpgradesTo == id;
+	}
+	public void sanatizeReactorValues() {
+		if(chamberParent != 0 && (!ElementKeyMap.isValidType(chamberParent)|| !ElementKeyMap.isChamber((short)chamberParent))){
+			System.err.println("SANATIZED REACTOR chamberParent "+this.getName()+" -> "+ElementKeyMap.toString(chamberParent));
+			chamberParent = 0;
+		}
+		if(chamberRoot != 0 && (!ElementKeyMap.isValidType(chamberRoot)|| !ElementKeyMap.isChamber((short)chamberRoot))){
+			System.err.println("SANATIZED REACTOR chamberRoot "+this.getName()+" -> "+ElementKeyMap.toString(chamberRoot));
+			chamberRoot = 0;
+		}
+		if(chamberUpgradesTo != 0 && (!ElementKeyMap.isValidType(chamberUpgradesTo) || !ElementKeyMap.isChamber((short)chamberUpgradesTo))){
+			System.err.println("SANATIZED REACTOR chamberUpgradesTo "+this.getName()+" -> "+ElementKeyMap.toString(chamberUpgradesTo));
+			chamberUpgradesTo = 0;
+		}
+		
+		ShortIterator iterator = chamberPrerequisites.iterator();
+		while(iterator.hasNext()){
+			short s = iterator.nextShort();
+			if(s != 0 && (!ElementKeyMap.isValidType(s)|| !ElementKeyMap.isChamber(s))){
+				System.err.println("SANATIZED REACTOR chamberPrereq "+this.getName()+" -> "+ElementKeyMap.toString(s));
+				iterator.remove();
+			}
+		}
+		iterator = chamberChildren.iterator();
+		while(iterator.hasNext()){
+			short s = iterator.nextShort();
+			if(s != 0 && (!ElementKeyMap.isValidType(s)|| !ElementKeyMap.isChamber(s))){
+				System.err.println("SANATIZED REACTOR chamberChildren "+this.getName()+" -> "+ElementKeyMap.toString(s));
+				iterator.remove();
+			}
+		}
+		if(isReactorChamberSpecific() || getId() == ElementKeyMap.REACTOR_MAIN || getId() == ElementKeyMap.REACTOR_CONDUIT || getId() == ElementKeyMap.REACTOR_STABILIZER){
+			if(this.reactorHp == 0){
+				this.reactorHp = 10;
+			}
+		}else{
+			this.reactorHp = 0;
+		}
+	}
+//	public String getChamberEffectInfo(ConfigPool pool) {
+//		if(chamberConfigGroupsLowerCase.isEmpty()){
+//			return String.format("No Effect");
+//		}else{
+//			StringBuffer sb = new StringBuffer();
+//			for(String s : chamberConfigGroupsLowerCase){
+//				ConfigGroup configGroup = pool.poolMapLowerCase.get(s);
+//				if(configGroup != null){
+//					sb.append(configGroup.getEffectDescription());
+//				}
+//			}
+//			return sb.toString().trim();
+//		}
+//	}
+	private float getChamberCapacityBranchRec(float rec) {
+		if(ElementKeyMap.isValidType(chamberParent)){
+			ElementInformation m = ElementKeyMap.getInfoFast(chamberParent);
+			return m.getChamberCapacityBranchRec(rec + m.chamberCapacity);
+		}
+		return rec;
+	}
+	public float getChamberCapacityBranch() {
+		return getChamberCapacityBranchRec(chamberCapacity);
+	}
+	public int getSourceReference() {
+		if(chamberRoot != 0){
+			return chamberRoot;
+		}
+		return sourceReference;
+	}
+	public void setSourceReference(int sourceReference) {
+		this.sourceReference = sourceReference;
+	}
+	public float getChamberCapacityWithUpgrades() {
+		float chamUp = this.chamberCapacity;
+		if(isChamberUpgraded()){
+			if(ElementKeyMap.isValidType(chamberParent)){
+				chamUp += ElementKeyMap.getInfo(chamberParent).getChamberCapacityWithUpgrades();
+			}
+		}
+		return chamUp;
+	}
+
+//	public boolean isChamberPermitted(EntityType t){
+//		if(chamberPermission == CHAMBER_PERMISSION_ANY){
+//			return true;
+//		}
+//		switch(t){
+//		case PLANET_CORE:
+//		case PLANET_ICO:
+//		case PLANET_SEGMENT:
+//			return (chamberPermission & CHAMBER_PERMISSION_PLANET) == CHAMBER_PERMISSION_PLANET; 
+//		case SHIP:
+//			return (chamberPermission & CHAMBER_PERMISSION_SHIP) == CHAMBER_PERMISSION_SHIP;
+//		case SHOP:
+//		case SPACE_STATION:
+//			return (chamberPermission & CHAMBER_PERMISSION_STATION) == CHAMBER_PERMISSION_STATION;
+//		default:
+//			return false;
+//		
+//		}
+//	}
+	public String getDescriptionIncludingChamberUpgraded() {
+		if(isChamberUpgraded()){
+			return ElementKeyMap.getInfo(chamberParent).getDescription();
+		}
+		return getDescription();
+	}
+	public boolean isThisOrParentChamberMutuallyExclusive(short type) {
+		if(chamberMutuallyExclusive.contains(type)){
+			return true;
+		}
+		if(ElementKeyMap.isValidType(chamberParent)){
+			return ElementKeyMap.getInfoFast(chamberParent).isThisOrParentChamberMutuallyExclusive(type);
+		}
+		return false;
+	}
+	public boolean isArmor() {
+		return armorValue > 0;
+	}
+	private static final float AB = 1f / 127f;
+	public float getMaxHitPointsOneDivByByte() {
+		return AB;
+	}
+	public byte getMaxHitPointsByte() {
+		return 127;
+	}
+	/**
+	 * @param maxHitPoints the maxHitPoints to set
+	 */
+	public void setMaxHitPointsE(int maxHitPoints) {
+		assert(maxHitPoints > 0);
+		this.maxHitPointsFull = maxHitPoints;
+		this.maxHitpointsInverse = (1d / (double)maxHitPoints);
+		this.maxHitpointsFullToByte = 127d / (double)maxHitPoints ;
+		this.maxHitpointsByteToFull = (double)maxHitPoints / 127d;
+	}
+	public short convertToByteHp(int hpFull) {
+//		System.err.println("CONVERT: "+hpFull+"; "+maxHitpointsFullToByte+"; "+getMaxHitPointsFull());
+		return (short)Math.max(0, Math.min(ElementKeyMap.MAX_HITPOINTS, Math.round(((double)hpFull * maxHitpointsFullToByte)))) ; //hp * (127 / maxHitPoints)
+	}
+	public int convertToFullHp(short hpByte) {
+		return (int) (hpByte * maxHitpointsByteToFull); //hp * (maxHitPoints / 127)
+	}
+	public void setHpOldByte(short oldHitpoints) {
+		this.oldHitpoints = oldHitpoints;
+	}
+	public short getHpOldByte() {
+		return oldHitpoints;
+	}
+	public float getArmorValue() {
+		return armorValue;
+	}
+	public void setArmorValue(float armorValue) {
+		this.armorValue = armorValue;
+	}
+	public boolean isMineAddOn() {
+		return id == ElementKeyMap.MINE_MOD_FRIENDS||
+				id == ElementKeyMap.MINE_MOD_PERSONAL||
+				id == ElementKeyMap.MINE_MOD_STEALTH||
+				id == ElementKeyMap.MINE_MOD_STRENGTH;
+	}
+	public boolean isMineType() {
+		return id == ElementKeyMap.MINE_TYPE_CANNON ||
+				id == ElementKeyMap.MINE_TYPE_MISSILE||
+				id == ElementKeyMap.MINE_TYPE_PROXIMITY;
+	}
+	
 
 
 }

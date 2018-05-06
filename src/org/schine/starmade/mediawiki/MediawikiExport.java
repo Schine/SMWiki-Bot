@@ -217,10 +217,9 @@ public class MediawikiExport {
 		
 		s.append("{{infobox block");
 		s.append("|type="+info.getName());
-		s.append("|hp="+info.getMaxHitPoints());
-		s.append("|armor="+StringTools.formatPointZero(info.getArmourPercent()*100f)+"%");
-		s.append("|ahp="+info.armourHP);
-		s.append("|shp="+info.structureHP);
+		s.append("|hp="+info.getMaxHitPointsFull());
+		s.append("|aval="+info.getArmorValue());
+		s.append("|rhp="+info.reactorHp);
 		s.append("|mass="+StringTools.formatPointZeroZero(info.getMass()));
 		s.append("|light="+(info.isLightSource() ? info.getLightSourceColor() : "none"));
 		s.append("|dv="+info.getId());
@@ -265,8 +264,8 @@ This block is used in the production of:
 		StringBuffer s = new StringBuffer();
 		
 		String f = "none";
-		if(ElementKeyMap.isValidType(info.getProducedIn())){
-			ElementInformation facInfo = ElementKeyMap.getInfo(info.getProducedIn());
+		if(ElementKeyMap.isValidType(info.getProducedInFactoryType())){
+			ElementInformation facInfo = ElementKeyMap.getInfo(info.getProducedInFactoryType());
 			f = facInfo.getName();
 		
 		
@@ -315,16 +314,16 @@ This block is used in the production of:
 		
 		for(short oth : ElementKeyMap.keySet){
 			ElementInformation other = ElementKeyMap.getInfo(oth);
-			if(ElementKeyMap.isValidType(other.getProducedIn())){
+			if(ElementKeyMap.isValidType(other.getProducedInFactoryType())){
 				RecipeInterface pr = other.getProductionRecipe();
 				
 				for(RecipeProductInterface p : pr.getRecipeProduct()){
 					for(FactoryResource res : p.getInputResource()){
 						if(res.type == info.getId()){
-							Short2IntOpenHashMap lst = m.get(other.getProducedIn());
+							Short2IntOpenHashMap lst = m.get(other.getProducedInFactoryType());
 							if(lst == null){
 								lst = new Short2IntOpenHashMap();
-								m.put(other.getProducedIn(), lst);
+								m.put(other.getProducedInFactoryType(), lst);
 							}
 							
 							lst.put(oth, res.count);

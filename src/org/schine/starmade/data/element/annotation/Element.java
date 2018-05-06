@@ -8,6 +8,8 @@ import java.lang.annotation.Target;
 @Target(ElementType.FIELD)
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Element {
+	boolean elementSet() default false;
+
 	String collectionElementTag() default "";
 
 	String collectionType() default "";
@@ -37,8 +39,8 @@ public @interface Element {
 
 	String[] stateDescs() default {};
 
-	String tag();
-
+	ElemType parser();
+	
 	boolean textArea() default false;
 
 	int to() default -1;
@@ -58,4 +60,12 @@ public @interface Element {
 	boolean editable() default true;
 
 	boolean lodShape() default false;
+
+	boolean selectBlock() default false;
+
+	boolean shortSet() default false;
+
+	boolean stringSet() default false;
+
+	boolean configGroupSet() default false;
 }
