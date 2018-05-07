@@ -149,13 +149,15 @@ public class MediawikiExport {
 					uploadProduction(ElementKeyMap.getInfo(k));
 					uploadBasicStub(ElementKeyMap.getInfo(k));
 				}
-			
+				Thread.sleep(500);
 			}
 			System.out.println("Logging out: "+args[0]);
 			wiki.logout();
 		} catch (IOException e) {
 			e.printStackTrace();
 		} catch (LoginException e) {
+			e.printStackTrace();
+		} catch (InterruptedException e) {
 			e.printStackTrace();
 		}
 
@@ -204,8 +206,15 @@ public class MediawikiExport {
 		wiki.edit("Template:Infobox_block/"+getTitle(info), text, "Bot created");
 	}
 	private void uploadBasicStub(ElementInformation info) throws LoginException, IOException {
-		String text = createTitleSection(info);
-		wiki.edit(getTitle(info), text, "Bot created");
+		String title = getTitle(info);
+		
+		if(!wiki.exists(new String[] {title})[0]) {
+			System.err.println("+++++++++ EDITING: "+title+"; ");
+			String text = createTitleSection(info);
+			wiki.edit(title, text, "Bot created");
+		}else{
+			System.err.println("######### NOT EDITING: "+title+"; already existed");
+		}
 	}
 
 	private void uploadProduction(ElementInformation info) throws LoginException, IOException{
